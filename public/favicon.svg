@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <title>FORMIVA</title>
+  <!--
+    The mark at favicon scale. The detached arm is drawn in the accent so the
+    gap survives at 16px: at that size the eye reads a colour break long
+    after it stops resolving eight units of empty space.
+  -->
+  <rect width="100" height="100" rx="18" fill="#0B0B0C"/>
+  <rect x="12" y="8" width="16" height="84" fill="#F4F1EA"/>
+  <rect x="28" y="8" width="56" height="16" fill="#F4F1EA"/>
+  <rect x="36" y="42" width="36" height="16" fill="#E5502A"/>
+</svg>

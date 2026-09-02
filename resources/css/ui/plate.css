@@ -1,0 +1,111 @@
+/* ==========================================================================
+   PLATE
+   The generated artwork frame. Handles the crop, the reveal and the hover;
+   the artwork itself is drawn server-side by App\Support\Plate.
+
+   Property ownership is strict here, and deliberately so:
+
+     clip-path   the reveal      (CSS)
+     transform   the parallax    (GSAP, per frame)
+     scale       the hover       (CSS)
+
+   `transform` and `scale` are separate properties in modern CSS, so the
+   hover can transition independently while GSAP writes translation every
+   frame. Putting both on `transform` — the obvious way — means a 1400ms
+   CSS transition tries to interpolate every value GSAP sets, and the
+   parallax arrives visibly late and stepped.
+   ========================================================================== */
+
+@layer components {
+  .plate {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    background-color: var(--surface-sunk);
+    isolation: isolate;
+  }
+
+  .plate__inner {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Overscaled so the parallax has somewhere to travel without exposing an
+       edge. The figure is the crop; the artwork moves inside it. */
+    scale: 1.14;
+    transition: scale 1400ms var(--ease-line);
+    will-change: transform;
+  }
+
+  .plate svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ---- Reveal -----------------------------------------------------------
+     A clip wipe from the bottom edge. Scoped to plates that actually carry
+     a reveal trigger — a plate opted out of the reveal has nothing to add
+     `is-revealed`, and would otherwise stay clipped to nothing forever. */
+
+  .js-reveal-ready .plate[data-plate-reveal]:not(.is-revealed) {
+    clip-path: inset(0 0 100% 0);
+  }
+
+  .plate[data-plate-reveal].is-revealed {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 1100ms var(--ease-line);
+  }
+
+  /* ---- Frame furniture --------------------------------------------------
+     A hairline and a caption sitting on the plate, borrowed from print. Only
+     where the plate is doing editorial work, not everywhere. */
+
+  .plate--framed::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(244, 241, 234, 0.09);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  [data-theme='light'] .plate--framed::after {
+    border-color: rgba(11, 11, 12, 0.1);
+  }
+
+  .plate__caption {
+    position: absolute;
+    inset-block-end: var(--s-3);
+    inset-inline-start: var(--s-3);
+    z-index: 3;
+    color: var(--bone-200);
+    opacity: 0.55;
+    mix-blend-mode: difference;
+  }
+
+  /* ---- Aspect ratios ----------------------------------------------------- */
+
+  .plate[data-ratio='1/1'] { aspect-ratio: 1 / 1; }
+  .plate[data-ratio='4/3'] { aspect-ratio: 4 / 3; }
+  .plate[data-ratio='3/4'] { aspect-ratio: 3 / 4; }
+  .plate[data-ratio='3/2'] { aspect-ratio: 3 / 2; }
+  .plate[data-ratio='2/3'] { aspect-ratio: 2 / 3; }
+  .plate[data-ratio='16/9'] { aspect-ratio: 16 / 9; }
+  .plate[data-ratio='16/10'] { aspect-ratio: 16 / 10; }
+
+  /* The extreme ratios stop working on a narrow screen — a 3/4 portrait at
+     360px pushes everything else below the fold. Normalise the tall and the
+     wide toward something readable. */
+  @media (max-width: 700px) {
+    .plate[data-ratio='3/4'],
+    .plate[data-ratio='2/3'] { aspect-ratio: 4 / 5; }
+    .plate[data-ratio='16/9'] { aspect-ratio: 3 / 2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate__inner {
+      scale: 1;
+      transition: none;
+    }
+  }
+}

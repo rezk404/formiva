@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+@import './base/tokens.css';
+@import './base/reset.css';
+@import './base/typography.css';
+@import './base/layout.css';
+
+@import './ui/nav.css';
+@import './ui/controls.css';
+@import './ui/world.css';
+@import './ui/plate.css';
+
+@source '../views';
+@source '../js';
+@source '../../storage/framework/views/*.php';
+
+/* ==========================================================================
+   FORMIVA
+   FORM + VIVA — giving ideas form and life.
+
+   The stylesheet is ordered the way the site is built: tokens, then the
+   ground rules, then the pieces that recur, then the chapters in the order
+   a reader meets them.
+
+   Tailwind supplies the reset and a small number of layout utilities used
+   in the Blade templates. Everything with a name — .hero, .entry, .stage —
+   is written by hand, because a site whose whole argument is art direction
+   should not be assembled out of utility strings.
+
+   Custom rules live in @layer components so Tailwind utilities still win
+   where a template needs to override one locally.
+   ========================================================================== */
+
+@theme {
+  /* Exposed to Tailwind so utilities exist in the brand palette where a
+     template genuinely wants one. The canonical values are in
+     base/tokens.css — these mirror them. */
+
+  --color-ink: #0b0b0c;
+  --color-ink-deep: #060607;
+  --color-ink-raised: #17171a;
+  --color-bone: #f4f1ea;
+  --color-bone-bright: #fbf9f4;
+  --color-bone-dim: #dad3c4;
+  --color-signal: #e5502a;
+
+  --font-display: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-sans: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Film grain source. Generated rather than fetched — one less request, and
+   it scales with the page instead of tiling at a fixed density. */
+@layer base {
+  :root {
+    --grain-src: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  }
+}
+@import './formiva-redesign.css';

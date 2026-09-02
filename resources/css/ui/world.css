@@ -1,0 +1,93 @@
+/* ==========================================================================
+   THE WORLD
+   One fixed canvas behind the entire document. Chapters that want the 3D
+   visible paint no background; chapters that want calm paint over it. The
+   world is therefore revealed and concealed by the page scrolling across
+   it, which needs no JavaScript and never desynchronises.
+   ========================================================================== */
+
+@layer components {
+  .world {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-world);
+    pointer-events: none;
+    background-color: var(--ink-800);
+  }
+
+  .world__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1200ms var(--ease-out);
+  }
+
+  .world.is-ready .world__canvas {
+    opacity: 1;
+  }
+
+  /* A slow vignette that keeps the object off the corners of the frame and
+     stops the type at the edges competing with the geometry. */
+  .world::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 50% 42%, transparent 38%, rgba(6, 6, 7, 0.72) 100%);
+  }
+
+  /* ---- Fallback ---------------------------------------------------------
+     Shown when WebGL is unavailable, when the context is lost, or when the
+     renderer throws. It is a real composition rather than an apology, so a
+     visitor without WebGL still gets a designed hero. */
+
+  .world__fallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--ink-800);
+  }
+
+  .world.is-fallback .world__fallback {
+    display: flex;
+  }
+
+  .world.is-fallback .world__canvas {
+    display: none;
+  }
+
+  .world__fallback svg {
+    width: min(52vw, 44vh);
+    height: auto;
+    opacity: 0.85;
+  }
+
+  .world__fallback-slab {
+    animation: fallback-drift 9s var(--ease-io) infinite alternate;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .world__fallback-slab:nth-child(2n) { animation-delay: -1.4s; }
+  .world__fallback-slab:nth-child(3n) { animation-delay: -2.8s; }
+  .world__fallback-slab:nth-child(5n) { animation-delay: -4.2s; }
+
+  @keyframes fallback-drift {
+    from { transform: translateX(0) scaleX(1); }
+    to { transform: translateX(2.5%) scaleX(0.985); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .world__fallback-slab {
+      animation: none;
+    }
+
+    .world__canvas {
+      transition: none;
+    }
+  }
+}

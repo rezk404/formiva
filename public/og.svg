@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <title>FORMIVA — Ideas take form.</title>
+
+  <!--
+    The social card, drawn from the same parts as the site: the mark, the
+    statement, and the strata stack in its monolith state. A shared link
+    should already look like the place it points at.
+  -->
+
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#101012"/>
+      <stop offset="100%" stop-color="#08080A"/>
+    </linearGradient>
+    <linearGradient id="falloff" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#08080A" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#08080A" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#ground)"/>
+
+  <!-- The strata, right of centre, tapered as the monolith state defines it -->
+  <g transform="translate(880 315)">
+    <g opacity="0.92">
+      <rect x="-150" y="-244" width="300" height="11" rx="3" fill="#4A4A52"/>
+      <rect x="-166" y="-224" width="332" height="11" rx="3" fill="#55555E"/>
+      <rect x="-182" y="-204" width="364" height="11" rx="3" fill="#60606A"/>
+      <rect x="-196" y="-184" width="392" height="11" rx="3" fill="#6C6C76"/>
+      <rect x="-208" y="-164" width="416" height="11" rx="3" fill="#787882"/>
+      <rect x="-218" y="-144" width="436" height="11" rx="3" fill="#84848E"/>
+      <rect x="-226" y="-124" width="452" height="11" rx="3" fill="#909099"/>
+      <rect x="-232" y="-104" width="464" height="11" rx="3" fill="#9C9CA4"/>
+      <rect x="-237" y="-84" width="474" height="11" rx="3" fill="#A6A6AD"/>
+      <rect x="-240" y="-64" width="480" height="11" rx="3" fill="#B0B0B6"/>
+      <rect x="-242" y="-44" width="484" height="11" rx="3" fill="#B9B6B1"/>
+      <rect x="-242" y="-24" width="484" height="11" rx="3" fill="#E5502A"/>
+      <rect x="-242" y="-4" width="484" height="11" rx="3" fill="#B9B6B1"/>
+      <rect x="-240" y="16" width="480" height="11" rx="3" fill="#B0B0B6"/>
+      <rect x="-237" y="36" width="474" height="11" rx="3" fill="#A6A6AD"/>
+      <rect x="-232" y="56" width="464" height="11" rx="3" fill="#9C9CA4"/>
+      <rect x="-226" y="76" width="452" height="11" rx="3" fill="#909099"/>
+      <rect x="-218" y="96" width="436" height="11" rx="3" fill="#84848E"/>
+      <rect x="-208" y="116" width="416" height="11" rx="3" fill="#787882"/>
+      <rect x="-196" y="136" width="392" height="11" rx="3" fill="#6C6C76"/>
+      <rect x="-182" y="156" width="364" height="11" rx="3" fill="#60606A"/>
+      <rect x="-166" y="176" width="332" height="11" rx="3" fill="#55555E"/>
+      <rect x="-150" y="196" width="300" height="11" rx="3" fill="#4A4A52"/>
+      <rect x="-132" y="216" width="264" height="11" rx="3" fill="#3F3F47"/>
+    </g>
+  </g>
+
+  <rect width="1200" height="630" fill="url(#falloff)"/>
+
+  <!-- The mark -->
+  <g transform="translate(80 74) scale(0.44)">
+    <rect x="12" y="8" width="16" height="84" fill="#F4F1EA"/>
+    <rect x="28" y="8" width="56" height="16" fill="#F4F1EA"/>
+    <rect x="36" y="42" width="36" height="16" fill="#E5502A"/>
+  </g>
+
+  <text x="130" y="112" font-family="Archivo, Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="26" font-weight="700" letter-spacing="1.2" fill="#F4F1EA">FORMIVA</text>
+
+  <!-- The statement -->
+  <text x="80" y="392" font-family="Archivo, Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="112" font-weight="700" letter-spacing="-4" fill="#FBF9F4">IDEAS</text>
+  <text x="80" y="500" font-family="Archivo, Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="112" font-weight="700" letter-spacing="-4" fill="#FBF9F4">TAKE FORM<tspan fill="#E5502A">.</tspan></text>
+
+  <rect x="80" y="546" width="420" height="1" fill="#F4F1EA" opacity="0.22"/>
+
+  <text x="80" y="580" font-family="IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace"
+        font-size="15" letter-spacing="3.2" fill="#8A867E">CREATIVE TECHNOLOGY STUDIO — LISBOA</text>
+</svg>
