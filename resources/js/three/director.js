@@ -123,10 +123,46 @@ export function initWorld() {
         },
     });
 
-    // The canvas is a continuous world rather than a hero decoration. Every
-    // chapter deliberately leaves visual breathing room for it, so it stays
-    // alive and evolves throughout the complete scroll narrative.
-    world.setActive(true);
+    /* ── Visibility ──────────────────────────────────────────────────────────
+       The frame is not a continuous backdrop: only the chapters marked
+       `data-world-visible` clear their ground for it, and everything else
+       paints over it opaquely. Rendering follows that exactly — active
+       while one of those chapters is on screen, paused otherwise, which on
+       a typical scroll is most of the time.
+
+       Below the compact breakpoint the scrim goes solid (see pages.css),
+       so the canvas can never be seen and is never worth rendering. The
+       breakpoint is duplicated here deliberately; the two must stay in
+       step. */
+
+    const stages = qsa('[data-world-visible]');
+    const compact = window.matchMedia('(max-width: 900px)');
+
+    if (!stages.length) {
+        world.setActive(false);
+    } else {
+        const onScreen = new Set();
+
+        const sync = () => world.setActive(onScreen.size > 0 && !compact.matches);
+
+        const visibility = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) onScreen.add(entry.target);
+                    else onScreen.delete(entry.target);
+                });
+
+                sync();
+            },
+            { rootMargin: '10% 0px' }
+        );
+
+        stages.forEach((stage) => visibility.observe(stage));
+
+        if (typeof compact.addEventListener === 'function') {
+            compact.addEventListener('change', sync);
+        }
+    }
 
     /* ── Pointer ─────────────────────────────────────────────────────────────
        Moves the camera a little, never the object. Skipped on touch, where

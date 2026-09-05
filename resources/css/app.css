@@ -5,14 +5,25 @@
 @import './base/typography.css';
 @import './base/layout.css';
 
-@import './ui/nav.css';
 @import './ui/controls.css';
 @import './ui/world.css';
 @import './ui/plate.css';
 
+@import './pages.css';
+
+/*
+ | Class names are scanned from the sources that actually declare them.
+ |
+ | `storage/framework/views` — Blade's compiled output — used to be scanned
+ | too, which made the build non-deterministic: with a warm view cache the
+ | stylesheet came out 43% larger than with a cold one, because the scanner
+ | found candidate class names inside compiled PHP. Since a production
+ | deploy runs `view:cache` before building assets, that was the size that
+ | shipped. The templates below are the source of truth; a class assembled
+ | at runtime would not appear in the compiled file either.
+ */
 @source '../views';
 @source '../js';
-@source '../../storage/framework/views/*.php';
 
 /* ==========================================================================
    FORMIVA
@@ -42,7 +53,7 @@
   --color-bone: #f4f1ea;
   --color-bone-bright: #fbf9f4;
   --color-bone-dim: #dad3c4;
-  --color-signal: #e5502a;
+  --color-signal: #c6421e;
 
   --font-display: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-sans: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -59,4 +70,3 @@
     --grain-src: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
   }
 }
-@import './formiva-redesign.css';

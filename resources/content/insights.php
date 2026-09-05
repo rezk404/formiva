@@ -5,7 +5,7 @@
 | Signals — the studio journal
 |--------------------------------------------------------------------------
 |
-| Four entries, deliberately opinionated. `dek` is the one line that has to
+| Five entries, deliberately opinionated. `dek` is the one line that has to
 | earn the click; it is not a summary.
 |
 */
@@ -13,6 +13,19 @@
 return [
     [
         'index' => '01',
+        'slug' => 'erp-is-an-org-chart-problem',
+        'category' => 'Systems',
+        'title' => 'ERP is an org-chart problem before it is a software problem',
+        'dek' => 'Most implementations fail in the first meeting, when nobody says out loud who currently owns the spreadsheet.',
+        'date' => '2026-08-18',
+        'date_label' => 'August 2026',
+        'reading' => '8 min',
+        'body' => 'The software is rarely why an ERP rollout stalls. It stalls because three departments each believe they own a process nobody wrote down, and the system is the first thing forcing them to agree. Map the disagreement before you map the modules.',
+        'plate' => ['seed' => 5789, 'variant' => 'signal', 'ratio' => '16/10'],
+        'alt' => 'Interlocking rectilinear bands forming a load-bearing frame, one department per column.',
+    ],
+    [
+        'index' => '02',
         'slug' => 'motion-has-a-budget',
         'category' => 'Motion',
         'title' => 'Motion has a budget, and you are over it',
@@ -25,7 +38,7 @@ return [
         'alt' => 'Bands smeared along one axis, suggesting a motion budget spent unevenly.',
     ],
     [
-        'index' => '02',
+        'index' => '03',
         'slug' => 'tokens-are-a-contract',
         'category' => 'Systems',
         'title' => 'Design tokens are a contract, not a colour list',
@@ -38,7 +51,7 @@ return [
         'alt' => 'A strict modular grid of equal bands with one deliberately mismatched.',
     ],
     [
-        'index' => '03',
+        'index' => '04',
         'slug' => 'against-the-hero-video',
         'category' => 'Craft',
         'title' => 'The case against the hero video',
@@ -51,7 +64,7 @@ return [
         'alt' => 'A heavy block dominating the frame with thin bands crushed beneath it.',
     ],
     [
-        'index' => '04',
+        'index' => '05',
         'slug' => 'first-ninety-days',
         'category' => 'Practice',
         'title' => 'What we measure in the first ninety days',

@@ -29,31 +29,18 @@
     display: block;
     width: 100%;
     height: 100%;
-    /* Overscaled so the parallax has somewhere to travel without exposing an
-       edge. The figure is the crop; the artwork moves inside it. */
+    /* A fixed 14% overscale. The figure is the crop; this is what decides
+       how much of the drawn composition it shows. Nothing animates it —
+       there is no `transition` or `will-change` here because there is
+       nothing to transition, and promoting every plate to its own
+       compositing layer for a static image is pure cost. */
     scale: 1.14;
-    transition: scale 1400ms var(--ease-line);
-    will-change: transform;
   }
 
   .plate svg {
     width: 100%;
     height: 100%;
     display: block;
-  }
-
-  /* ---- Reveal -----------------------------------------------------------
-     A clip wipe from the bottom edge. Scoped to plates that actually carry
-     a reveal trigger — a plate opted out of the reveal has nothing to add
-     `is-revealed`, and would otherwise stay clipped to nothing forever. */
-
-  .js-reveal-ready .plate[data-plate-reveal]:not(.is-revealed) {
-    clip-path: inset(0 0 100% 0);
-  }
-
-  .plate[data-plate-reveal].is-revealed {
-    clip-path: inset(0 0 0 0);
-    transition: clip-path 1100ms var(--ease-line);
   }
 
   /* ---- Frame furniture --------------------------------------------------
@@ -102,10 +89,4 @@
     .plate[data-ratio='16/9'] { aspect-ratio: 3 / 2; }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .plate__inner {
-      scale: 1;
-      transition: none;
-    }
-  }
 }

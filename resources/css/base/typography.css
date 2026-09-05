@@ -1,107 +1,12 @@
 /* ==========================================================================
    TYPOGRAPHY
-   Archivo carries a width axis, which the display sizes use. Condensing the
-   very largest type is what lets a headline fill a viewport without
-   dissolving into a wall — it is the difference between big and loud.
-
-   There is no `.display--xl` scale in this file. Every headline on the site
-   is set once, in its own chapter's stylesheet, at a size chosen for that
-   composition — a shared display scale would be a list of classes with one
-   caller each. What lives here is the machinery the chapters share: the
-   annotation voice, the body settings, and the reveal primitives.
+   Every headline on the site is set once, in its own page's stylesheet
+   (pages.css), at a size chosen for that composition — there is no shared
+   display scale here. What lives in this file is the one small utility every
+   page is free to reach for.
    ========================================================================== */
 
 @layer components {
-  /* ---- Body ------------------------------------------------------------- */
-
-  .prose {
-    font-size: var(--t-base);
-    line-height: var(--leading-body);
-    max-width: var(--measure);
-    color: var(--text-muted);
-    text-wrap: pretty;
-  }
-
-  .prose + .prose {
-    margin-top: var(--s-4);
-  }
-
-  /* ---- Micro type -------------------------------------------------------
-     The mono voice: labels, indices, metadata — anything the eye should read
-     as an annotation on the page rather than as part of it. */
-
-  .mono {
-    font-family: var(--font-mono);
-    font-size: var(--t-mono);
-    font-weight: 400;
-    letter-spacing: var(--track-widest);
-    text-transform: uppercase;
-    line-height: 1;
-    font-feature-settings: 'tnum' 1;
-  }
-
-  .mono--muted {
-    color: var(--text-faint);
-  }
-
-  .mono--accent {
-    color: var(--accent);
-  }
-
-  /* Editorial index numeral. Sits in the margin, never in the flow. */
-  .numeral {
-    font-family: var(--font-mono);
-    font-size: var(--t-mono);
-    letter-spacing: 0.14em;
-    color: var(--text-faint);
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-
-  /* ---- Accents ---------------------------------------------------------- */
-
-  .accent {
-    color: var(--accent);
-  }
-
-  /* The accented terminal mark. One point of colour at the end of a
-     viewport-sized statement is worth more than any gradient, and it is the
-     device linking the opening headline to the closing one. */
-  .stop {
-    color: var(--signal);
-  }
-
-  /* ---- Reveal primitives ------------------------------------------------
-     JS wraps lines in .line > .line__inner and animates the inner element.
-     What follows is the no-JS and reduced-motion resting state: fully
-     visible, correctly spaced, nothing to undo. */
-
-  .line {
-    display: block;
-    overflow: hidden;
-  }
-
-  .line__inner {
-    display: block;
-    will-change: transform;
-  }
-
-  [data-reveal] {
-    /* Only hidden once JS has confirmed it can animate — see core/reveal.js.
-       Without this guard, a script failure would leave the page blank. */
-    opacity: 1;
-  }
-
-  .js-reveal-ready [data-reveal]:not(.is-revealed) {
-    opacity: 0;
-  }
-
-  .js-reveal-ready [data-reveal='mask']:not(.is-revealed) .line__inner {
-    transform: translate3d(0, 105%, 0);
-  }
-
-  /* ---- Utility ---------------------------------------------------------- */
-
   .sr-only {
     position: absolute;
     width: 1px;

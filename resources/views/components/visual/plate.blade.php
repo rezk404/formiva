@@ -5,8 +5,6 @@
     'alt' => '',
     'caption' => null,
     'framed' => false,
-    'parallax' => true,
-    'reveal' => true,
     'decorative' => false,
 ])
 
@@ -33,8 +31,6 @@
         'class' => 'plate' . ($framed ? ' plate--framed' : ''),
     ]) }}
     data-ratio="{{ $ratio }}"
-    @if ($reveal) data-plate-reveal @endif
-    @if ($parallax) data-plate-parallax @endif
 >
     <span class="plate__inner">
         <svg

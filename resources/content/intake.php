@@ -29,7 +29,11 @@ return [
     'companySizes' => ['Solo / startup', '2–10 people', '11–50 people', '51–250 people', '250+ people'],
     'services' => ['Strategy', 'Product design', 'Brand identity', 'Web development', 'Mobile development', 'Odoo / ERP', 'CRM / automation', 'Motion / 3D'],
     'rules' => [
-        'low' => ['web' => 20, 'commerce' => 30, 'software' => 100, 'systems' => 100, 'experience' => 20, 'other' => 20],
+        // Indicative only — surfaced on the review step, never presented as a
+        // quotation. Kept centralised here so the estimator has one source of
+        // truth instead of duplicating this mapping in JavaScript.
         'fit' => ['web' => 'Digital Products', 'commerce' => 'Digital Products', 'software' => 'Digital Products', 'systems' => 'Business Systems', 'experience' => 'Experience', 'other' => 'Digital Products'],
+        'complexity' => ['web' => 'Low–Medium', 'commerce' => 'Medium', 'software' => 'Medium–High', 'systems' => 'Medium–High', 'experience' => 'Low–Medium', 'other' => 'To be scoped'],
+        'timeline_hint' => ['web' => '4–8 weeks', 'commerce' => '6–10 weeks', 'software' => '10–20 weeks', 'systems' => '8–18 weeks', 'experience' => '3–6 weeks', 'other' => 'To be scoped'],
     ],
 ];

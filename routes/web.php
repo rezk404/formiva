@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/work', [HomeController::class, 'work'])->name('work.index');
 Route::get('/work/{slug}', [HomeController::class, 'project'])->name('projects.show');
+Route::get('/services', [HomeController::class, 'services'])->name('services.index');
+Route::get('/studio', [HomeController::class, 'studio'])->name('studio');
 Route::get('/insights', [HomeController::class, 'insightsIndex'])->name('insights.index');
 Route::get('/insights/{slug}', [HomeController::class, 'insight'])->name('insights.show');
 Route::get('/start-a-project', [HomeController::class, 'contact'])->name('contact');

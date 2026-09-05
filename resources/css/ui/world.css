@@ -61,29 +61,46 @@
   }
 
   .world__fallback svg {
-    width: min(52vw, 44vh);
+    width: min(46vw, 44vh);
     height: auto;
-    opacity: 0.85;
+    opacity: 0.9;
   }
 
-  .world__fallback-slab {
-    animation: fallback-drift 9s var(--ease-io) infinite alternate;
-    transform-box: fill-box;
-    transform-origin: center;
+  .world__fallback-line {
+    stroke: var(--bone-200);
+    stroke-opacity: 0.5;
+    stroke-width: 1.5;
+    fill: none;
+    stroke-dasharray: 340;
+    stroke-dashoffset: 340;
+    animation: fallback-draw 900ms ease-out forwards;
   }
 
-  .world__fallback-slab:nth-child(2n) { animation-delay: -1.4s; }
-  .world__fallback-slab:nth-child(3n) { animation-delay: -2.8s; }
-  .world__fallback-slab:nth-child(5n) { animation-delay: -4.2s; }
+  .world__fallback-cell {
+    opacity: 0;
+    animation: fallback-fill 600ms ease-out 900ms forwards;
+  }
 
-  @keyframes fallback-drift {
-    from { transform: translateX(0) scaleX(1); }
-    to { transform: translateX(2.5%) scaleX(0.985); }
+  .world__fallback-cell--a { fill: var(--signal); }
+  .world__fallback-cell--b { fill: #3e6690; }
+
+  @keyframes fallback-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes fallback-fill {
+    to { opacity: 0.85; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .world__fallback-slab {
+    .world__fallback-line {
       animation: none;
+      stroke-dashoffset: 0;
+    }
+
+    .world__fallback-cell {
+      animation: none;
+      opacity: 0.85;
     }
 
     .world__canvas {

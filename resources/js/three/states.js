@@ -1,46 +1,30 @@
-import { GOLDEN_ANGLE, hash, hashSigned, lerp } from '../lib/math.js';
+import { GOLDEN_ANGLE, hash, hashSigned, lerp, clamp } from '../lib/math.js';
 
 /**
- * THE STRATA — states
+ * THE FRAME — states
  *
- * One object runs the length of the site: a stack of machined slabs. It is
- * never replaced, only rearranged, and each arrangement is an argument the
- * chapter beneath it is making.
+ * FORMIVA's own story is IDEA → FORM → SYSTEM. This object is that story,
+ * not a decoration next to it: a lattice of structural bars that begins as
+ * scattered fragments, connects into a drawn wireframe, organises into a
+ * rack of solid modules, explodes into an axonometric diagram, resolves
+ * into an elevation, and finally stands complete.
  *
- *   monolith   a single finished form            — the idea, whole
- *   breathe    the same form, barely moving      — the quiet chapters
- *   fan        the stack opens into a system     — services
- *   disperse   the system gains complexity       — the work
- *   stair      complexity resolves into order    — the process
- *   resolve    closed again, but not as it began — the ending
+ * The lattice is a grid of nodes; every bar is the edge between two
+ * adjacent nodes, horizontal or vertical. A state is a pure function of a
+ * bar's index — given the same index it returns the same transform every
+ * time, on every device — which is what lets two states be blended by
+ * interpolating their outputs rather than animating anything.
  *
- * A state is a pure function of slab index. Given the same index it returns
- * the same transform every time, on every device, which is what lets two
- * states be blended by interpolating between their outputs rather than by
- * animating anything.
- *
- * Writing into a supplied array keeps this allocation-free — it is called
- * once per slab per frame.
- *
- * ── The vertical constraint ──────────────────────────────────────────────
- *
- * Every state's Y half-extent must exceed `count * SLAB_THICKNESS / 2`, or
- * the slabs occupy the same space and the object renders as an
- * interpenetrating lump with z-fighting along every seam. At the highest
- * slab count (34) that floor is 1.394, so no state below sets a half-extent
- * under about 1.45. `monolith` and `resolve` sit deliberately close to it —
- * a ten-thousandth of a unit of daylight per seam is what makes a stack read
- * as one machined block rather than as a pile of plates.
+ * `n` (the instance count) always equals 2·N·(N-1) for a grid resolution
+ * N, so N is recovered from `n` rather than threaded through every call —
+ * see `gridSize`. This keeps the (i, n, out) contract identical to the
+ * geometry layer and the director above it.
  */
 
-const TAU = Math.PI * 2;
+const HALF_W = 1.7;
+const HALF_H = 1.9;
 
-/**
- * Slab thickness. Declared here rather than in strata.js because the state
- * functions are what depend on it: the geometry can change size freely, but
- * the moment this and the Y extents disagree, the object breaks.
- */
-export const SLAB_THICKNESS = 0.082;
+export const BEAM_THICKNESS = 0.05;
 
 // Transform slots in the output array.
 export const PX = 0;
@@ -55,181 +39,226 @@ export const SZ = 8;
 
 export const STRIDE = 9;
 
+/** Recovers the grid resolution from a bar count: n = 2N(N-1). */
+export function gridSize(n) {
+    return Math.max(2, Math.round((1 + Math.sqrt(1 + 2 * n)) / 2));
+}
+
+/** Node count for a grid resolution — geometry.js uses this to size the mesh. */
+export function beamCount(N) {
+    return 2 * N * (N - 1);
+}
+
+function nodeX(col, N) {
+    return lerp(-HALF_W, HALF_W, N > 1 ? col / (N - 1) : 0.5);
+}
+
+function nodeY(row, N) {
+    return lerp(-HALF_H, HALF_H, N > 1 ? row / (N - 1) : 0.5);
+}
+
 /**
- * Writes a full transform.
- *
- * `s` scales width and depth together; thickness is left alone, so a slab
- * that narrows stays the same plate rather than becoming a different object.
+ * A bar's fixed identity: which grid edge it is. Computed from the index
+ * alone, so geometry setup and every state function agree on the same
+ * mapping without sharing mutable state.
  */
-function write(out, px, py, pz, rx, ry, rz, s) {
+function identify(i, n) {
+    const N = gridSize(n);
+    const perRow = N - 1;
+    const half = N * perRow;
+
+    if (i < half) {
+        return { horizontal: true, N, col: i % perRow, row: Math.floor(i / perRow) };
+    }
+
+    const j = i - half;
+    return { horizontal: false, N, col: Math.floor(j / perRow), row: j % perRow };
+}
+
+/** The bar's resting pose on the flat, connected grid. */
+function gridPose(i, n) {
+    const { horizontal, N, col, row } = identify(i, n);
+
+    if (horizontal) {
+        const x0 = nodeX(col, N);
+        const x1 = nodeX(col + 1, N);
+        return { cx: (x0 + x1) / 2, cy: nodeY(row, N), length: x1 - x0, rz: 0, col, row, N, horizontal };
+    }
+
+    const y0 = nodeY(row, N);
+    const y1 = nodeY(row + 1, N);
+    return { cx: nodeX(col, N), cy: (y0 + y1) / 2, length: y1 - y0, rz: Math.PI / 2, col, row, N, horizontal };
+}
+
+/**
+ * Writes a full transform. `sx` is the bar's length in world units (the
+ * base geometry is one unit long); `sThick` scales its cross-section —
+ * thinner reads as a drawn line, thicker reads as a built module.
+ */
+function write(out, px, py, pz, rx, ry, rz, sx, sThick = 1) {
     out[PX] = px;
     out[PY] = py;
     out[PZ] = pz;
     out[RX] = rx;
     out[RY] = ry;
     out[RZ] = rz;
-    out[SX] = s;
-    out[SY] = 1;
-    out[SZ] = s;
+    out[SX] = sx;
+    out[SY] = sThick;
+    out[SZ] = sThick;
     return out;
 }
 
-/** Index → -1..1, centred on the middle slab. */
-const centred = (i, n) => (n > 1 ? (i / (n - 1)) * 2 - 1 : 0);
-
-/** Index → 0..1. */
-const normal = (i, n) => (n > 1 ? i / (n - 1) : 0.5);
-
 /* ── The states ─────────────────────────────────────────────────────────── */
 
-function monolith(i, n, out) {
-    const c = centred(i, n);
-    // A barrel taper. Identical plates would read as a stack; a form that
-    // swells at the waist reads as one machined object.
-    const s = 1 - Math.abs(c) ** 1.7 * 0.3;
+/** IDEA — mostly scattered stubs; a fifth of the bars have already found
+ *  their place, a hint of the form the rest are about to take. */
+function fragments(i, n, out) {
+    const pose = gridPose(i, n);
+    const settled = hash(i, 9) < 0.22;
 
-    return write(out, 0, c * 1.52, 0, 0, c * 0.1, 0, s);
-}
+    if (settled) {
+        return write(out, pose.cx, pose.cy, 0, 0, 0, pose.rz, pose.length, 0.7);
+    }
 
-function breathe(i, n, out) {
-    const c = centred(i, n);
-    const s = 1 - Math.abs(c) ** 1.7 * 0.26;
-
-    return write(out, Math.sin(c * Math.PI) * 0.04, c * 1.66, 0, 0, c * 0.16, 0, s);
-}
-
-function fan(i, n, out) {
-    const t = normal(i, n);
-    const c = centred(i, n);
+    const spread = 1.15;
+    const px = pose.cx + hashSigned(i, 1) * spread;
+    const py = pose.cy + hashSigned(i, 2) * spread;
+    const pz = hashSigned(i, 3) * 0.85;
+    const stub = pose.length * (0.15 + hash(i, 4) * 0.2);
 
     return write(
         out,
-        Math.sin(t * Math.PI * 1.5) * 0.26,
-        c * 2.15,
-        Math.cos(t * Math.PI * 1.2) * 0.18,
-        0,
-        c * 1.5,
-        0,
-        0.7 + Math.sin(t * Math.PI) * 0.34
+        px, py, pz,
+        hashSigned(i, 5) * 0.7,
+        hashSigned(i, 6) * 0.7,
+        pose.rz + hashSigned(i, 7) * 0.7,
+        stub,
+        0.55
     );
 }
 
-function disperse(i, n, out) {
-    const c = centred(i, n);
+/** FORM — fully connected. A clean drawn wireframe, thin and precise. */
+function wireframe(i, n, out) {
+    const pose = gridPose(i, n);
+    return write(out, pose.cx, pose.cy, 0, 0, 0, pose.rz, pose.length, 0.68);
+}
 
-    // Deterministic scatter. Stable across reloads, identical on every
-    // device — a slab must not be somewhere else on a second visit.
-    //
-    // The vertical jitter is capped at 0.036 rather than eyeballed. Base
-    // spacing here is 0.159 and thickness is 0.082, leaving 0.077 of
-    // headroom; two neighbours jittering toward each other spend twice the
-    // amplitude, so anything above ~0.038 lets them intersect and z-fight.
-    // The scatter reads through X, Z and rotation regardless — the Y jitter
-    // was only ever breaking the regularity of the seams.
+/** SYSTEM — the lattice organises into a rack: rows step back in depth,
+ *  bars thicken from drawn lines into built modules. */
+function rack(i, n, out) {
+    const pose = gridPose(i, n);
+    const rowT = pose.N > 1 ? pose.row / (pose.N - 1) : 0.5;
+
+    const px = pose.cx + rowT * 0.5;
+    const pz = rowT * 0.9 - 0.35;
+
+    return write(out, px, pose.cy, pz, 0, 0, pose.rz, pose.length, 1.15);
+}
+
+/** WORK — an exploded axonometric diagram. Deterministic scatter, stable
+ *  across reloads: a bar must not be somewhere else on a second visit. */
+function exploded(i, n, out) {
+    const pose = gridPose(i, n);
+
+    const px = pose.cx + hashSigned(i, 11) * 1.35;
+    const py = pose.cy + hashSigned(i, 12) * 1.1;
+    const pz = hashSigned(i, 13) * 1.6;
+
     return write(
         out,
-        hashSigned(i, 3) * 0.68,
-        c * 2.62 + hashSigned(i, 6) * 0.036,
-        hashSigned(i, 4) * 0.5,
-        hashSigned(i, 7) * 0.09,
-        c * 2.6 + hashSigned(i, 1) * 0.75,
-        hashSigned(i, 2) * 0.17,
-        0.52 + hash(i, 5) * 0.6
+        px, py, pz,
+        hashSigned(i, 14) * 0.5,
+        hashSigned(i, 15) * 0.5,
+        pose.rz + hashSigned(i, 16) * 0.45,
+        pose.length * (0.85 + hash(i, 17) * 0.3),
+        0.85
     );
 }
 
-function stair(i, n, out) {
-    const c = centred(i, n);
+/** STUDIO / PROCESS — an elevation. Every row steps along one shared
+ *  diagonal; order arrived at, not imposed. */
+function elevation(i, n, out) {
+    const pose = gridPose(i, n);
+    const rowT = pose.N > 1 ? pose.row / (pose.N - 1) : 0.5;
+    const colT = pose.N > 1 ? pose.col / (pose.N - 1) : 0.5;
+    const step = (rowT - 0.5) * 1.1;
 
-    // Every slab now shares one rotation and one scale. The only variation
-    // left is a single diagonal — order arrived at, not imposed.
-    return write(out, c * 1.2, c * 2.1, c * -0.46, 0, 0.32, 0, 0.86);
+    return write(out, pose.cx + step, pose.cy, (colT - 0.5) * 0.5, 0, 0, pose.rz, pose.length, 0.9);
 }
 
-function resolve(i, n, out) {
-    const t = normal(i, n);
-    const c = centred(i, n);
-
-    // Closed again, and as tight as the monolith — but indexed on the golden
-    // angle rather than aligned. The form has been through something.
-    return write(out, 0, c * 1.48, 0, 0, i * GOLDEN_ANGLE * 0.12, 0, 0.8 + Math.sin(t * Math.PI) * 0.28);
+/** CLOSE — complete. The full structure, fully present, nothing left
+ *  scattered or exploded: the idea has become the system. */
+function resolved(i, n, out) {
+    const pose = gridPose(i, n);
+    return write(out, pose.cx, pose.cy, 0, 0, 0, pose.rz, pose.length, 1.05);
 }
 
-/* ── Service forms ───────────────────────────────────────────────────────────
-   The six services are not six objects. Each is the same stack holding a
-   different posture, chosen to say something about the discipline: modular
-   work stacks in units, infrastructure interlocks, mobile compresses. */
+/* ── Service postures ────────────────────────────────────────────────────
+   Six named variations on the connected grid, one per capability — the
+   same object holding a different posture rather than a different object,
+   so the studio's "one system, many uses" argument is made by the object
+   itself. Applied only while the ambient state is `rack` (services), and
+   expires automatically the moment the reader scrolls elsewhere. */
 
 function modular(i, n, out) {
-    const c = centred(i, n);
-    const step = Math.PI / 6;
-
-    // Rotation quantised to sixths of a turn: the stack reads as assembled
-    // from units rather than swept through an arc.
-    return write(out, ((i % 3) - 1) * 0.28, c * 2.0, 0, 0, Math.round((c * 1.4) / step) * step, 0, 0.88);
+    const pose = gridPose(i, n);
+    const unit = Math.floor(pose.col / 2) % 2 === 0;
+    return write(out, pose.cx, pose.cy, unit ? 0.12 : -0.12, 0, 0, pose.rz, pose.length, unit ? 1.2 : 0.7);
 }
 
 function layered(i, n, out) {
-    const c = centred(i, n);
-
-    // Barely any rotation and the widest separation of any state — surfaces
-    // sitting above one another, which is what a web build actually is.
-    return write(out, 0, c * 2.85, 0, 0, c * 0.06, 0, 1.02);
+    const pose = gridPose(i, n);
+    if (!pose.horizontal) {
+        return write(out, pose.cx, pose.cy, 0, 0, 0, pose.rz, pose.length * 0.2, 0.25);
+    }
+    return write(out, pose.cx, pose.cy, 0, 0, 0, pose.rz, pose.length, 1.1);
 }
 
 function compressed(i, n, out) {
-    const c = centred(i, n);
-
-    // Tight to the floor of the vertical constraint and narrow with it: the
-    // same material in a smaller envelope.
-    return write(out, 0, c * 1.46, 0, 0, c * 0.6, 0, 0.5);
+    const pose = gridPose(i, n);
+    return write(out, pose.cx * 0.5, pose.cy * 0.5, 0, 0, 0, pose.rz, pose.length * 0.55, 0.8);
 }
 
 function interfaceForm(i, n, out) {
-    const c = centred(i, n);
-
-    // Alternating offsets, no rotation. Reads as rows in a layout.
-    return write(out, (i % 2 === 0 ? -1 : 1) * 0.36, c * 1.98, 0, 0, 0, 0, 0.74);
+    const pose = gridPose(i, n);
+    const offset = pose.row % 2 === 0 ? 0.22 : -0.22;
+    return write(out, pose.cx + (pose.horizontal ? offset : 0), pose.cy, 0, 0, 0, pose.rz, pose.length, 0.95);
 }
 
 function networked(i, n, out) {
-    const t = normal(i, n);
-    const c = centred(i, n);
-    const angle = t * TAU;
-
-    // A helix around a shared axis: many small nodes on one circuit.
-    return write(out, Math.cos(angle) * 0.62, c * 1.72, Math.sin(angle) * 0.62, 0, angle, 0, 0.46);
+    const pose = gridPose(i, n);
+    const wave = Math.cos((pose.col / Math.max(pose.N - 1, 1)) * Math.PI * 2) * 0.55;
+    return write(out, pose.cx, pose.cy, wave, 0, wave * 0.3, pose.rz, pose.length, 0.75);
 }
 
 function structural(i, n, out) {
-    const c = centred(i, n);
-
-    // Alternating quarter turns: slabs read as interlocking rather than
-    // stacked, which is the whole idea of a platform.
-    return write(out, (i % 2 === 0 ? 0.2 : -0.2), c * 1.9, 0, 0, i % 2 === 0 ? 0 : Math.PI / 2, 0, 0.82);
+    const pose = gridPose(i, n);
+    const swap = (pose.col + pose.row) % 2 === 0;
+    const rz = swap ? pose.rz : pose.rz + Math.PI / 2;
+    return write(out, pose.cx, pose.cy, swap ? 0.15 : -0.15, 0, 0, rz, pose.length * 0.92, 1.2);
 }
 
-/* ── Registry ────────────────────────────────────────────────────────────────
-   Each state carries its own camera. Framing is part of the composition, and
-   the distances are derived from each state's height: at 38° vertical FOV a
-   camera sees 2·d·tan(19°), so a form 5.2 units tall needs about 8.2 units of
-   distance to sit in frame with margin. A dispersed form given a monolith's
-   camera would simply run off the top and bottom of the viewport. */
+/* ── Registry ────────────────────────────────────────────────────────────
+   Each state carries its own camera. The lattice spans roughly the same
+   footprint in every state (nothing here ever needs a wildly different
+   frame), so the cameras vary mainly in angle and distance rather than
+   reach — the axonometric tilt of `rack` and the flown-apart `exploded`
+   are the two that need to sit further back. */
 
 export const STATES = {
-    monolith: { slab: monolith, camera: { dist: 6.0, height: 0.05, tilt: 0.05, roll: 0, x: 0.55, targetX: 0 }, light: 0 },
-    breathe: { slab: breathe, camera: { dist: 6.4, height: 0.1, tilt: 0.08, roll: 0, x: -0.65, targetX: 0.12 }, light: 0.25 },
-    fan: { slab: fan, camera: { dist: 7.4, height: 0.22, tilt: 0.16, roll: 0.02, x: 0.92, targetX: -0.18 }, light: 0.55 },
-    disperse: { slab: disperse, camera: { dist: 8.2, height: 0.3, tilt: 0.2, roll: -0.03, x: -0.85, targetX: 0.22 }, light: 0.82 },
-    stair: { slab: stair, camera: { dist: 7.6, height: 0.12, tilt: 0.1, roll: 0.04, x: 0.72, targetX: -0.1 }, light: 0.38 },
-    resolve: { slab: resolve, camera: { dist: 5.6, height: 0.0, tilt: 0.04, roll: 0, x: 0, targetX: 0 }, light: 1 },
+    monolith: { slab: fragments, camera: { dist: 6.4, height: 0.15, tilt: 0.06, roll: 0, x: 0.5, targetX: 0 }, light: 0.15 },
+    breathe: { slab: wireframe, camera: { dist: 6.6, height: 0.1, tilt: 0.05, roll: 0, x: -0.6, targetX: 0.1 }, light: 0.3 },
+    fan: { slab: rack, camera: { dist: 7.8, height: 0.32, tilt: 0.22, roll: 0.02, x: 1.1, targetX: -0.3 }, light: 0.6 },
+    disperse: { slab: exploded, camera: { dist: 9.2, height: 0.35, tilt: 0.18, roll: -0.03, x: -0.9, targetX: 0.25 }, light: 0.85 },
+    stair: { slab: elevation, camera: { dist: 7.4, height: 0.1, tilt: 0.08, roll: 0.03, x: 0.65, targetX: -0.1 }, light: 0.4 },
+    resolve: { slab: resolved, camera: { dist: 6.2, height: 0.02, tilt: 0.04, roll: 0, x: 0, targetX: 0 }, light: 1 },
 
-    modular: { slab: modular, camera: { dist: 7.0, height: 0.16, tilt: 0.12, roll: 0, x: 0.9, targetX: -0.12 }, light: 0.55 },
-    layered: { slab: layered, camera: { dist: 8.6, height: 0.2, tilt: 0.22, roll: 0, x: 0.7, targetX: 0 }, light: 0.65 },
-    compressed: { slab: compressed, camera: { dist: 4.8, height: 0.06, tilt: 0.1, roll: 0, x: 0.5, targetX: 0 }, light: 0.45 },
-    interface: { slab: interfaceForm, camera: { dist: 7.0, height: 0.14, tilt: 0.05, roll: 0, x: 0.85, targetX: 0 }, light: 0.62 },
-    networked: { slab: networked, camera: { dist: 6.6, height: 0.26, tilt: 0.24, roll: 0, x: 0.55, targetX: 0 }, light: 0.72 },
-    structural: { slab: structural, camera: { dist: 6.9, height: 0.12, tilt: 0.14, roll: 0, x: 0.7, targetX: 0 }, light: 0.5 },
+    modular: { slab: modular, camera: { dist: 7.4, height: 0.2, tilt: 0.16, roll: 0, x: 1.0, targetX: -0.15 }, light: 0.6 },
+    layered: { slab: layered, camera: { dist: 8.2, height: 0.22, tilt: 0.24, roll: 0, x: 0.75, targetX: 0 }, light: 0.68 },
+    compressed: { slab: compressed, camera: { dist: 5.2, height: 0.08, tilt: 0.1, roll: 0, x: 0.55, targetX: 0 }, light: 0.5 },
+    interface: { slab: interfaceForm, camera: { dist: 7.6, height: 0.18, tilt: 0.14, roll: 0, x: 0.9, targetX: 0 }, light: 0.65 },
+    networked: { slab: networked, camera: { dist: 7.0, height: 0.28, tilt: 0.26, roll: 0, x: 0.6, targetX: 0 }, light: 0.72 },
+    structural: { slab: structural, camera: { dist: 7.6, height: 0.14, tilt: 0.2, roll: 0, x: 0.8, targetX: 0 }, light: 0.55 },
 };
 
 export const DEFAULT_STATE = 'monolith';
@@ -238,12 +267,11 @@ const bufferA = new Float32Array(STRIDE);
 const bufferB = new Float32Array(STRIDE);
 
 /**
- * Blends two named states for one slab, writing the result into `out`.
- *
- * Because states are pure functions, transitioning between any two of them
- * is a straight interpolation — there is no timeline to build, nothing to
- * kill when the reader scrolls back, and no possibility of the object being
- * stranded between chapters.
+ * Blends two named states for one bar, writing the result into `out`.
+ * Because states are pure functions, transitioning between any two of
+ * them is a straight interpolation — nothing to build, nothing to kill
+ * when the reader scrolls back, no possibility of the object being
+ * stranded mid-transition.
  */
 export function blendInto(out, fromName, toName, t, i, n) {
     const from = STATES[fromName] || STATES[DEFAULT_STATE];
@@ -283,4 +311,12 @@ export function blendCamera(fromName, toName, t) {
         targetX: lerp(from.targetX ?? 0, to.targetX ?? 0, t),
         light: lerp((STATES[fromName] || STATES[DEFAULT_STATE]).light ?? 0, (STATES[toName] || STATES[DEFAULT_STATE]).light ?? 0, t),
     };
+}
+
+/** Which third of the grid a bar sits in, 0/1/2 — geometry.js uses this to
+ *  tint bars by pillar: Digital Products / Business Systems / Experience. */
+export function zoneOf(i, n) {
+    const { N, col } = identify(i, n);
+    const t = N > 1 ? col / (N - 1) : 0.5;
+    return clamp(Math.floor(t * 3), 0, 2);
 }

@@ -1,13 +1,10 @@
 /* ==========================================================================
    LAYOUT
-   A twelve-column editorial grid. Chapters place themselves on it by column
-   line, not by container — which is what allows offsets, overlaps and
-   full-bleed moments to coexist without a special case for each.
-
-   There is no library of column-span utilities here. Each chapter states its
-   own placement in its own stylesheet, next to the reasoning for it, because
-   on this site no two chapters share a composition and a shared `.col-4`
-   would only ever have one caller.
+   The page shell and the fixed grain overlay. The editorial per-chapter
+   composition (grid placement, offsets, overlaps) lives in pages.css next to
+   each chapter's own markup, because no two chapters on this site share a
+   layout and a generic column-span utility library would only ever have one
+   caller per rule.
    ========================================================================== */
 
 @layer components {
@@ -16,74 +13,6 @@
     z-index: var(--z-content);
     isolation: isolate;
     flex: 1 0 auto;
-  }
-
-  .grid12 {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: var(--gutter);
-    padding-inline: var(--margin);
-  }
-
-  /* The default chapter: opaque, on the page's own ground, generously
-     spaced. Chapters that need a different ground — the ones that let the
-     3D world show through — simply do not use it. */
-  .chapter {
-    position: relative;
-    background-color: var(--surface);
-    color: var(--text);
-    padding-block: var(--chapter-y);
-  }
-
-  /* ---- Chapter heading pattern ------------------------------------------
-     Repeats across the page and is the main thing holding the chapters
-     together as one document. Index in the margin, label beside it, a rule
-     that runs to the edge. */
-
-  .chapter-head {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: subgrid;
-    align-items: baseline;
-    padding-block-end: var(--s-6);
-    margin-block-end: var(--s-7);
-    border-block-end: 1px solid var(--line-soft);
-  }
-
-  @supports not (grid-template-columns: subgrid) {
-    .chapter-head {
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      column-gap: var(--gutter);
-    }
-  }
-
-  .chapter-head__index {
-    grid-column: 1 / span 2;
-  }
-
-  .chapter-head__label {
-    grid-column: 3 / span 5;
-  }
-
-  .chapter-head__note {
-    grid-column: 9 / span 4;
-    text-align: right;
-  }
-
-  @media (max-width: 900px) {
-    .chapter-head {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--s-3);
-      justify-content: space-between;
-      padding-block-end: var(--s-4);
-      margin-block-end: var(--s-6);
-    }
-
-    .chapter-head__note {
-      text-align: left;
-      width: 100%;
-    }
   }
 
   /* ---- Film grain -------------------------------------------------------

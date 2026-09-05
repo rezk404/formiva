@@ -6,9 +6,13 @@
 |--------------------------------------------------------------------------
 |
 | `plate` drives the generated visual — see App\Support\Plate. The seed is
-| stable, so a project's artwork never changes between deploys. `weight`
-| controls how much of the editorial grid the entry occupies; the four
-| entries deliberately do not share a layout.
+| stable, so a project's artwork never changes between deploys.
+|
+| Every field below is optional except `slug`: App\Content\StaticContent
+| normalises each record into a guaranteed shape before any view sees it,
+| which is what allows the templates to render without testing for keys.
+| A field added here is dropped unless the normaliser carries it through —
+| that is deliberate, so the contract stays explicit rather than implied.
 |
 */
 
@@ -25,7 +29,6 @@ return [
         'client' => 'Kiln Archive',
         'description' => 'A commerce platform that turned a dense ceramics archive into an intuitive, editorial buying experience.',
         'coverImage' => ['seed' => 1847, 'variant' => 'ink', 'ratio' => '16/9'],
-        'thumbnail' => ['seed' => 1858, 'variant' => 'bone', 'ratio' => '4/3'],
         'clientLogo' => 'KILN / ARCHIVE',
         'challenge' => 'Thousands of objects were trapped in a catalogue designed for specialists, not collectors.',
         'solution' => 'We paired a flexible content model with expressive browsing tools and a fast, considered checkout.',
@@ -38,7 +41,6 @@ return [
         'stack' => ['Headless Shopify', 'Next.js', 'Sanity', 'Algolia'],
         'result' => ['value' => '+38%', 'label' => 'Revenue per session'],
         'featured' => true,
-        'layout' => 'wide',
         'plate' => ['seed' => 1847, 'variant' => 'ink', 'ratio' => '4/3'],
         'alt' => 'Kiln — a dense stack of horizontal slabs in charcoal and oxide, reading as a cross-section through a ceramics archive.',
     ],
@@ -54,7 +56,6 @@ return [
         'client' => 'Meridian Capital',
         'description' => 'A financial product that trades dashboard noise for legible, confident decision-making.',
         'coverImage' => ['seed' => 2291, 'variant' => 'bone', 'ratio' => '16/9'],
-        'thumbnail' => ['seed' => 2302, 'variant' => 'ink', 'ratio' => '4/3'],
         'clientLogo' => 'MERIDIAN',
         'challenge' => 'Experienced investors needed to understand risk and movement without deciphering another trading terminal.',
         'solution' => 'We designed a calm data language, clear portfolio narratives, and a flexible component system for the product team.',
@@ -67,7 +68,6 @@ return [
         'stack' => ['React', 'TypeScript', 'D3', 'Rust API'],
         'result' => ['value' => '4.1×', 'label' => 'Weekly active accounts'],
         'featured' => true,
-        'layout' => 'offset-right',
         'plate' => ['seed' => 2291, 'variant' => 'bone', 'ratio' => '3/4'],
         'alt' => 'Meridian — pale layered bands offset against a ruled measurement grid, suggesting a portfolio broken into intervals.',
     ],
@@ -83,7 +83,6 @@ return [
         'client' => 'Aether Systems',
         'description' => 'A new brand and web experience for a sensing platform making invisible conditions understandable.',
         'coverImage' => ['seed' => 733, 'variant' => 'signal', 'ratio' => '16/9'],
-        'thumbnail' => ['seed' => 744, 'variant' => 'bone', 'ratio' => '1/1'],
         'clientLogo' => 'AETHER / SYSTEMS',
         'challenge' => 'The technology was sophisticated, but its story was too technical to create momentum with new partners.',
         'solution' => 'We translated atmospheric data into a living visual language, then built a site that makes the science feel tangible.',
@@ -96,7 +95,6 @@ return [
         'stack' => ['Three.js', 'GSAP', 'Astro', 'Cloudflare'],
         'result' => ['value' => '2.7×', 'label' => 'Qualified enquiries'],
         'featured' => false,
-        'layout' => 'offset-left',
         'plate' => ['seed' => 733, 'variant' => 'signal', 'ratio' => '1/1'],
         'alt' => 'Aether — thin translucent strata drifting apart over a dark field, evoking layers of atmosphere under measurement.',
     ],
@@ -112,7 +110,6 @@ return [
         'client' => 'Northbound',
         'description' => 'An offline-first mobile experience built for people who head outside of coverage on purpose.',
         'coverImage' => ['seed' => 3608, 'variant' => 'ink', 'ratio' => '16/9'],
-        'thumbnail' => ['seed' => 3619, 'variant' => 'signal', 'ratio' => '4/3'],
         'clientLogo' => 'NORTHBOUND',
         'challenge' => 'Critical route information had to stay clear, useful, and available when a connection disappeared.',
         'solution' => 'We designed a compact navigation system around offline maps, glanceable terrain context, and durable saved routes.',
@@ -125,8 +122,34 @@ return [
         'stack' => ['React Native', 'MapLibre', 'SQLite', 'Expo'],
         'result' => ['value' => '61%', 'label' => 'Day-30 retention'],
         'featured' => false,
-        'layout' => 'full',
         'plate' => ['seed' => 3608, 'variant' => 'ink', 'ratio' => '16/9'],
         'alt' => 'Northbound — a ascending diagonal of narrow slabs across a dark field, reading as a route gaining elevation.',
+    ],
+    [
+        'id' => 5,
+        'index' => '05',
+        'slug' => 'ledgerline',
+        'name' => 'Ledgerline',
+        'title' => 'Ledgerline',
+        'category' => 'Business systems / ERP',
+        'year' => '2026',
+        'statement' => 'Three warehouses, one spreadsheet, and nobody who trusted the number in it.',
+        'client' => 'Ledgerline Distribution',
+        'description' => 'An Odoo ERP implementation that unified inventory, finance and field sales for a regional distributor across three warehouses.',
+        'coverImage' => ['seed' => 6204, 'variant' => 'signal', 'ratio' => '16/9'],
+        'clientLogo' => 'LEDGERLINE',
+        'challenge' => 'Stock counts, pricing and commissions each lived in a different spreadsheet, reconciled by hand at month end — and rarely agreed with each other.',
+        'solution' => 'We implemented Odoo across inventory, accounting and CRM, migrated four years of records, and automated the handoffs between warehouse, finance and the field sales team.',
+        'outcome' => 'One system of record that closes the month in days, not weeks, and a sales team that can see live stock from a phone.',
+        'gallery' => [
+            ['seed' => 6204, 'variant' => 'signal', 'ratio' => '4/3'],
+            ['seed' => 6231, 'variant' => 'ink', 'ratio' => '16/10'],
+        ],
+        'services' => ['Discovery', 'Odoo implementation', 'Data migration', 'Automation'],
+        'stack' => ['Odoo 17', 'PostgreSQL', 'Python', 'Zapier'],
+        'result' => ['value' => '6 days', 'label' => 'Faster month-end close'],
+        'featured' => true,
+        'plate' => ['seed' => 6204, 'variant' => 'signal', 'ratio' => '4/3'],
+        'alt' => 'Ledgerline — interlocking rectilinear slabs in oxide and charcoal, reading as three separate ledgers resolving into one structure.',
     ],
 ];

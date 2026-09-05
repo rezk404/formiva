@@ -64,6 +64,29 @@ class HomeController extends Controller
         ]);
     }
 
+    public function services(): View
+    {
+        return view('pages.services', [
+            'site' => $this->content->site(),
+            'services' => $this->content->services(),
+            'title' => 'Services — FORMIVA',
+            'description' => 'Digital products, business systems and digital experience — what FORMIVA builds, and why a business needs each one.',
+        ]);
+    }
+
+    public function studio(): View
+    {
+        return view('pages.studio', [
+            'site' => $this->content->site(),
+            'services' => $this->content->services(),
+            'studio' => $this->content->studio(),
+            'process' => $this->content->process(),
+            'team' => $this->content->team(),
+            'title' => 'Studio — FORMIVA',
+            'description' => 'Who FORMIVA is, how the studio works, and the people behind the digital products and business systems it builds.',
+        ]);
+    }
+
     public function insight(string $slug): View
     {
         $insight = $this->content->insight($slug);

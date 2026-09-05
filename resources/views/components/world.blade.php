@@ -2,24 +2,26 @@
     /*
      | The fallback composition.
      |
-     | Drawn with the same rule as the 3D monolith state — a barrel taper
-     | across a stack of slabs — so a visitor without WebGL sees the studio's
-     | object, not an apology. Only the dimension is missing.
+     | Drawn as the same lattice the 3D object is built from — a connected
+     | grid of bars with two solid cells picked out — so a visitor without
+     | WebGL sees the studio's own diagram, not an apology. Only the third
+     | dimension is missing.
      */
-    $slabs = 26;
-    $stack = [];
+    $cols = 6;
+    $rows = 7;
+    $x0 = 40; $x1 = 360;
+    $y0 = 40; $y1 = 460;
+    $stepX = ($x1 - $x0) / ($cols - 1);
+    $stepY = ($y1 - $y0) / ($rows - 1);
 
-    for ($i = 0; $i < $slabs; $i++) {
-        $c = ($i / ($slabs - 1)) * 2 - 1;
-        $scale = 1 - (abs($c) ** 1.7) * 0.3;
+    $hLines = [];
+    for ($r = 0; $r < $rows; $r++) {
+        $hLines[] = ['x1' => $x0, 'y' => $y0 + $r * $stepY, 'x2' => $x1];
+    }
 
-        $stack[] = [
-            'w' => round(300 * $scale, 1),
-            'x' => round(200 - (300 * $scale) / 2 + $c * 6, 1),
-            'y' => round(40 + $i * 15.4, 1),
-            'o' => round(0.42 + (1 - abs($c)) * 0.5, 2),
-            'accent' => $i === 9,
-        ];
+    $vLines = [];
+    for ($c = 0; $c < $cols; $c++) {
+        $vLines[] = ['x' => $x0 + $c * $stepX, 'y1' => $y0, 'y2' => $y1];
     }
 @endphp
 
@@ -29,19 +31,15 @@
     {{-- Shown only when WebGL is unavailable, refused, or the context is
          lost mid-session. See three/world.js. --}}
     <div class="world__fallback">
-        <svg viewBox="0 0 400 460" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            @foreach ($stack as $slab)
-                <rect
-                    class="world__fallback-slab"
-                    x="{{ $slab['x'] }}"
-                    y="{{ $slab['y'] }}"
-                    width="{{ $slab['w'] }}"
-                    height="9"
-                    rx="2"
-                    fill="{{ $slab['accent'] ? '#e5502a' : '#b9b6b1' }}"
-                    opacity="{{ $slab['o'] }}"
-                />
+        <svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            @foreach ($hLines as $i => $line)
+                <line class="world__fallback-line" x1="{{ $line['x1'] }}" y1="{{ $line['y'] }}" x2="{{ $line['x2'] }}" y2="{{ $line['y'] }}" style="animation-delay: {{ $i * 90 }}ms" />
             @endforeach
+            @foreach ($vLines as $i => $line)
+                <line class="world__fallback-line" x1="{{ $line['x'] }}" y1="{{ $line['y1'] }}" x2="{{ $line['x'] }}" y2="{{ $line['y2'] }}" style="animation-delay: {{ $i * 90 + 60 }}ms" />
+            @endforeach
+            <rect class="world__fallback-cell world__fallback-cell--a" x="{{ $x0 + 2 * $stepX }}" y="{{ $y0 + 2 * $stepY }}" width="{{ $stepX }}" height="{{ $stepY }}" />
+            <rect class="world__fallback-cell world__fallback-cell--b" x="{{ $x0 + 4 * $stepX }}" y="{{ $y0 + 4 * $stepY }}" width="{{ $stepX }}" height="{{ $stepY }}" />
         </svg>
     </div>
 </div>

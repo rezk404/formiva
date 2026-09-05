@@ -48,4 +48,13 @@ return [
         'plate' => ['seed' => 4522, 'variant' => 'ink', 'ratio' => '3/4'],
         'alt' => 'Portrait plate for Casper Lund — offset bands suggesting motion blur across a dark field.',
     ],
+    [
+        'index' => '05',
+        'name' => 'Youssef Nabil',
+        'role' => 'Head of Business Systems',
+        'bio' => 'Spent five years inside finance teams before touching Odoo. Reads a chart of accounts the way the others read a wireframe.',
+        'since' => '2022',
+        'plate' => ['seed' => 4689, 'variant' => 'signal', 'ratio' => '3/4'],
+        'alt' => 'Portrait plate for Youssef Nabil — structural interlocking bands with a single oxide accent.',
+    ],
 ];

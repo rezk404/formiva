@@ -9,7 +9,7 @@
     <meta name="keywords" content="{{ $site['meta']['keywords'] }}">
     <meta name="author" content="{{ $site['brand']['name'] }}">
     <meta name="theme-color" content="{{ $site['meta']['theme_color'] }}">
-    <meta name="color-scheme" content="dark light">
+    <meta name="color-scheme" content="light dark">
 
     <link rel="canonical" href="{{ url()->current() }}">
 
@@ -25,7 +25,7 @@
     <meta property="og:image" content="{{ asset('og.svg') }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="FORMIVA — Ideas take form.">
+    <meta property="og:image:alt" content="FORMIVA — Idea. Form. System.">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title ?? $site['meta']['title'] }}">
@@ -45,9 +45,11 @@
         href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&display=swap"
     >
 
-    {{-- Paint the page ink before any stylesheet resolves. Without this the
-         first frame is a white flash under a dark hero. --}}
-    <style>html{background-color:#0b0b0c}</style>
+    {{-- Paint the page ink before any stylesheet resolves. The hero — the
+         first thing on screen on every entry point — stays a dark anchor
+         even though the rest of the site is paper-light, so this must
+         match the hero, not the page's general ground. --}}
+    <style>html{background-color:#0d0d0c}</style>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -62,6 +64,7 @@
             'telephone' => $site['contact']['phone'],
             'foundingDate' => $site['brand']['founded'],
             'slogan' => $site['brand']['tagline'],
+            'sameAs' => array_column($site['social'], 'url'),
         ];
     @endphp
 
@@ -90,14 +93,15 @@
          reading as screen-native. --}}
     <div class="grain" aria-hidden="true"></div>
 
-    {{-- The world is enhancement. If script never runs, this ensures the
-         canvas holder cannot sit as an empty black box over the hero. --}}
+    {{-- The frame is an enhancement. Without script the canvas never
+         initialises and would sit as an empty panel behind the three
+         chapters that clear a ground for it, so the drawn fallback — the
+         same lattice, flat — takes its place. Everything else on the page
+         is already fully readable without script. --}}
     <noscript>
         <style>
-            .world { display: none; }
-            .hero, .cta, .services { background-color: #0b0b0c; }
-            .veil { display: none; }
-            [data-reveal] { opacity: 1 !important; }
+            .world__canvas { display: none; }
+            .world__fallback { display: flex; }
         </style>
     </noscript>
 </body>

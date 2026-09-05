@@ -18,10 +18,12 @@ import { env } from '../lib/env.js';
 /**
  * THE WORLD
  *
- * One renderer, one scene, one object, for the whole document. A canvas per
- * chapter would mean six WebGL contexts fighting over the GPU and six
- * unrelated objects fighting over the art direction; this is both cheaper
- * and the reason the site reads as a single place.
+ * One renderer, one scene, one object, shared by every chapter that wants
+ * it — a canvas per chapter would mean unrelated 3D objects fighting for
+ * attention. This build is intentionally selective about where the canvas
+ * shows at all: most chapters now sit on an opaque paper ground, and the
+ * frame only shows through the dark anchors (hero, services, close) where
+ * it is doing real narrative work rather than filling space.
  *
  * Everything that can fail here is expected to. If the context is refused,
  * lost, or the constructor throws, the caller is told and the CSS fallback
@@ -57,38 +59,34 @@ export function createWorld(canvas, options = {}) {
     renderer.setSize(window.innerWidth, window.innerHeight, false);
     renderer.outputColorSpace = SRGBColorSpace;
     renderer.toneMapping = ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.02;
-    renderer.setClearColor(0x0b0b0c, 1);
+    renderer.toneMappingExposure = 1.0;
+    renderer.setClearColor(0x0d0d0c, 1);
 
     const scene = new Scene();
-    // Fog matched to the clear colour. It is what puts air between the near
-    // and far slabs when the stack disperses.
-    scene.fog = new FogExp2(0x0b0b0c, 0.058);
+    scene.fog = new FogExp2(0x0d0d0c, 0.055);
 
-    const camera = new PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 60);
+    const camera = new PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.1, 60);
     camera.position.set(0, 0, 6);
 
     /* ── Light ───────────────────────────────────────────────────────────────
-       One warm key from high right, one cool rim from low left, and a very
-       dim hemisphere to keep the undersides from going to pure black. Three
-       lights, cinematic intent, no bloom anywhere. */
+       One warm key from high right, one cool rim from low left, a dim
+       hemisphere to keep undersides off pure black. Three lights, no bloom,
+       no post-processing pass. */
 
-    const key = new DirectionalLight(0xfff2e4, 2.6);
+    const key = new DirectionalLight(0xfaf3e6, 2.5);
     key.position.set(4.2, 6.5, 4.8);
     scene.add(key);
 
-    const rim = new DirectionalLight(0x8fb0cc, 1.15);
+    const rim = new DirectionalLight(0x9db9d6, 1.2);
     rim.position.set(-5.5, 1.4, -4.2);
     scene.add(rim);
 
-    const ambient = new HemisphereLight(0x6f7a88, 0x0a0a0c, 0.42);
+    const ambient = new HemisphereLight(0x6f7a88, 0x0a0a0c, 0.4);
     scene.add(ambient);
 
     /* ── Environment ─────────────────────────────────────────────────────────
-       A metallic surface with no environment to reflect renders as a flat
-       silhouette. RoomEnvironment is an addon and a large import, so it is
-       loaded after first paint and applied when it lands — the object simply
-       gains reflection a moment later rather than blocking on it. */
+       Loaded after first paint so it never blocks it; the object simply
+       gains reflection a moment later. Skipped entirely on low-power. */
 
     let pmrem = null;
 
@@ -109,8 +107,7 @@ export function createWorld(canvas, options = {}) {
             room.dispose?.();
             requestRender();
         } catch {
-            // No environment map. The three lights already carry the form;
-            // it is simply a less reflective object.
+            // No environment map — the three lights already carry the form.
         }
     }
 
@@ -136,7 +133,7 @@ export function createWorld(canvas, options = {}) {
     let last = performance.now();
 
     // Reduced motion gets the object, not the animation: one composed frame
-    // per state change, no loop, no idle drift.
+    // per state change, no loop.
     const still = !env.animate;
 
     function requestRender() {
@@ -145,17 +142,48 @@ export function createWorld(canvas, options = {}) {
         }
     }
 
+    /**
+     * Recomputing every bar's target is the most expensive thing per frame,
+     * and during a hold — which is most of the time — it produces exactly
+     * the values it produced last frame. Only redo it when the blend has
+     * actually moved.
+     */
+    let lastFrom = null;
+    let lastTo = null;
+    let lastBlend = -1;
+
+    function syncTargets() {
+        if (fromState === lastFrom && toState === lastTo && blend === lastBlend) return;
+
+        lastFrom = fromState;
+        lastTo = toState;
+        lastBlend = blend;
+
+        strata.setTarget(fromState, toState, blend);
+    }
+
     function renderOnce() {
         raf = null;
-        strata.setTarget(fromState, toState, blend);
-        strata.update(1, 1000, 0);
+        syncTargets();
+        strata.update(1, 1000);
         applyCamera(1, 1);
         renderer.render(scene, camera);
     }
 
+    /** @returns the largest remaining easing distance, for the settle check. */
     function applyCamera(dt, snap = 0) {
         const wanted = blendCamera(fromState, toState, blend);
         const rate = snap ? 1 : 1 - Math.exp(-2.4 * dt);
+
+        const residual = Math.max(
+            Math.abs(wanted.dist - cam.dist),
+            Math.abs(wanted.height - cam.height),
+            Math.abs(wanted.tilt - cam.tilt),
+            Math.abs(wanted.roll - cam.roll),
+            Math.abs(wanted.x - cam.x),
+            Math.abs(wanted.targetX - cam.targetX),
+            Math.abs(wanted.light - cam.light)
+        );
 
         cam.dist += (wanted.dist - cam.dist) * rate;
         cam.height += (wanted.height - cam.height) * rate;
@@ -165,20 +193,19 @@ export function createWorld(canvas, options = {}) {
         cam.targetX += (wanted.targetX - cam.targetX) * rate;
         cam.light += (wanted.light - cam.light) * rate;
 
-        // Pointer moves the camera, not the object. Orbiting the viewer
-        // around a still form feels like looking; spinning the form feels
-        // like a product configurator.
-        const px = pointerEased.x * 0.55;
-        const py = pointerEased.y * 0.34;
+        const px = pointerEased.x * 0.5;
+        const py = pointerEased.y * 0.32;
 
         camera.position.set(cam.x + px, cam.height + py + Math.sin(cam.tilt) * 0.6, cam.dist);
         camera.lookAt(cam.targetX, cam.height * 0.4, 0);
-        camera.rotation.z = cam.roll + pointerEased.x * 0.012;
+        camera.rotation.z = cam.roll + pointerEased.x * 0.01;
 
-        key.intensity = 2.25 + cam.light * 1.1;
-        rim.intensity = 0.7 + (1 - cam.light) * 0.75;
-        ambient.intensity = 0.32 + cam.light * 0.2;
-        renderer.toneMappingExposure = 0.94 + cam.light * 0.16;
+        key.intensity = 2.2 + cam.light * 1.0;
+        rim.intensity = 0.75 + (1 - cam.light) * 0.7;
+        ambient.intensity = 0.3 + cam.light * 0.2;
+        renderer.toneMappingExposure = 0.96 + cam.light * 0.14;
+
+        return residual;
     }
 
     function frame(now) {
@@ -191,13 +218,28 @@ export function createWorld(canvas, options = {}) {
         pointerEased.x = damp(pointerEased.x, pointer.x, 3.4, dt);
         pointerEased.y = damp(pointerEased.y, pointer.y, 3.4, dt);
 
-        strata.setTarget(fromState, toState, blend);
-        strata.update(dt, 3.6, 1);
-        applyCamera(dt);
+        syncTargets();
+
+        const settling = Math.max(
+            strata.update(dt, 3.6),
+            applyCamera(dt),
+            Math.abs(pointer.x - pointerEased.x),
+            Math.abs(pointer.y - pointerEased.y)
+        );
 
         renderer.render(scene, camera);
 
-        if (running) raf = requestAnimationFrame(frame);
+        if (!running) return;
+
+        // Nothing is idling any more — once the object has arrived, further
+        // frames would be pixel-for-pixel identical. Stop, and let any of
+        // the wake paths below restart the loop.
+        if (settling < 0.0004) {
+            running = false;
+            return;
+        }
+
+        raf = requestAnimationFrame(frame);
     }
 
     function start() {
@@ -217,11 +259,16 @@ export function createWorld(canvas, options = {}) {
 
     /* ── Public surface ──────────────────────────────────────────────────── */
 
+    /* Wake paths. The loop parks itself once the object settles, so anything
+       that changes what should be on screen has to restart it. */
+
     function blendTo(from, to, t) {
         fromState = from;
         toState = to;
         blend = clamp(t, 0, 1);
+
         if (still) requestRender();
+        else if (active) start();
     }
 
     function setState(name) {
@@ -229,9 +276,11 @@ export function createWorld(canvas, options = {}) {
     }
 
     /**
-     * Rendering pauses whenever the canvas is fully covered by an opaque
-     * chapter. Roughly two thirds of the page occludes it, so this is the
-     * single largest performance decision in the project.
+     * Rendering pauses whenever the canvas is fully occluded by an opaque
+     * chapter — which is most of the page now that only a few anchors show
+     * the frame at all. This is the single largest performance decision in
+     * the project, more so than before: the canvas spends most of a typical
+     * scroll paused.
      */
     function setActive(value) {
         if (active === value) return;
@@ -247,6 +296,8 @@ export function createWorld(canvas, options = {}) {
     function setPointer(x, y) {
         pointer.x = clamp(x, -1, 1);
         pointer.y = clamp(y, -1, 1);
+
+        if (active && !still) start();
     }
 
     function resize() {
@@ -259,13 +310,35 @@ export function createWorld(canvas, options = {}) {
         renderer.setPixelRatio(env.dpr);
         renderer.setSize(width, height, false);
 
-        requestRender();
         if (still) renderOnce();
+        else if (active) start();
     }
+
+    /* ── Failure handling ────────────────────────────────────────────────── */
+
+    const onContextLost = (event) => {
+        event.preventDefault();
+        stop();
+        if (onFail) onFail('lost');
+    };
+
+    const onVisibility = () => {
+        if (document.hidden) stop();
+        else if (active) start();
+    };
+
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    document.addEventListener('visibilitychange', onVisibility);
 
     function dispose() {
         disposed = true;
         stop();
+
+        // Listeners outlive the renderer unless they are taken off by hand;
+        // the document one in particular would otherwise keep a reference to
+        // this whole closure alive.
+        canvas.removeEventListener('webglcontextlost', onContextLost);
+        document.removeEventListener('visibilitychange', onVisibility);
 
         strata.dispose();
         pmrem?.dispose();
@@ -275,30 +348,11 @@ export function createWorld(canvas, options = {}) {
         renderer.forceContextLoss?.();
     }
 
-    /* ── Failure handling ────────────────────────────────────────────────── */
-
-    canvas.addEventListener('webglcontextlost', (event) => {
-        // Preventing the default is what allows a restore to be attempted at
-        // all, but the honest move is to hand over to the fallback now.
-        event.preventDefault();
-        stop();
-        if (onFail) onFail('lost');
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            stop();
-        } else if (active) {
-            start();
-        }
-    });
-
-    // First frame before anything else is scheduled, so the world is already
-    // composed when the veil lifts rather than assembling in front of the
-    // reader.
+    // First frame before anything else is scheduled, so the object is
+    // already composed when the page is first painted.
     try {
         strata.setTarget(DEFAULT_STATE, DEFAULT_STATE, 0);
-        strata.update(1, 1000, 0);
+        strata.update(1, 1000);
         applyCamera(1, 1);
         renderer.render(scene, camera);
     } catch (error) {

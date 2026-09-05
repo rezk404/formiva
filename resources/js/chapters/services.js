@@ -3,7 +3,7 @@ import { qs, qsa, on } from '../lib/dom.js';
 import { env } from '../lib/env.js';
 
 /**
- * 04 — Services
+ * Services
  *
  * The list is the interface. An entry claims focus when it reaches the
  * reading line, when a pointer enters it, or when the keyboard lands on it —
@@ -12,8 +12,12 @@ import { env } from '../lib/env.js';
  *
  * Nothing is pinned and the wheel is never intercepted. A reader who wants
  * to leave should be able to.
+ *
+ * `frame` is a holder rather than the director itself: the accordion is
+ * wired up the moment the page loads, while the 3D module is fetched
+ * separately and may never arrive at all. Everything here works either way.
  */
-export function initServices(director) {
+export function initServices(frame = {}) {
     const chapter = qs('[data-services]');
     if (!chapter) return;
 
@@ -26,27 +30,36 @@ export function initServices(director) {
 
     let currentIndex = 0;
 
+    const focusForm = (form) => {
+        if (form) frame.director?.setFocus(form);
+    };
+
+    /** Applies one row's open/closed state to markup and assistive tech. */
+    function render(index, open = true) {
+        rows.forEach((row, i) => row.classList.toggle('is-active', i === index && open));
+
+        triggers.forEach((trigger, i) => {
+            if (trigger) trigger.setAttribute('aria-expanded', i === index && open ? 'true' : 'false');
+        });
+
+        panes.forEach((pane, i) => {
+            const current = i === index && open;
+            pane.classList.toggle('is-current', current);
+            // A collapsed pane leaves the accessibility tree as well as the
+            // view — a screen reader should not be read three ledes in a row.
+            pane.setAttribute('aria-hidden', current ? 'false' : 'true');
+        });
+    }
+
     function activate(index) {
         if (index === currentIndex || index < 0 || index >= rows.length) return;
         currentIndex = index;
 
-        rows.forEach((row, i) => row.classList.toggle('is-active', i === index));
+        render(index);
 
-        triggers.forEach((trigger, i) => {
-            if (trigger) trigger.setAttribute('aria-expanded', i === index ? 'true' : 'false');
-        });
-
-        panes.forEach((pane, i) => {
-            pane.classList.toggle('is-current', i === index);
-            // Hidden panes leave the accessibility tree as well as the view.
-            // A screen reader should not be read six ledes in a row.
-            pane.setAttribute('aria-hidden', i === index ? 'false' : 'true');
-        });
-
-        // Reshape the world to match. The form name comes from the content
+        // Reshape the frame to match. The form name comes from the content
         // file, so adding a service brings its geometry with it.
-        const form = rows[index].dataset.form;
-        if (director && form) director.setFocus(form);
+        focusForm(rows[index].dataset.form);
     }
 
     /* ---- Scroll ------------------------------------------------------------
@@ -82,17 +95,44 @@ export function initServices(director) {
             const folded = window.innerWidth <= 1000;
 
             if (folded && index === currentIndex) {
-                const open = row.classList.toggle('is-active');
-                trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+                // Collapse in place. This has to go through `render` too, or
+                // the pane stays exposed to assistive tech after closing.
+                render(index, !row.classList.contains('is-active'));
                 return;
             }
 
             activate(index);
         });
+
+        // Sub-items inside the open pane get their own, finer-grained form —
+        // it only ever shows while this pillar is the active one, and reverts
+        // to the pillar's own form the moment the pointer leaves the item, so
+        // it can never outlive the row that owns it.
+        if (env.finePointer) {
+            const pane = panes[index];
+
+            qsa('[data-item-form]', pane || chapter).forEach((item) => {
+                on(item, 'pointerenter', () => {
+                    if (index === currentIndex) focusForm(item.dataset.itemForm);
+                });
+                on(item, 'pointerleave', () => {
+                    if (index === currentIndex) focusForm(row.dataset.form);
+                });
+            });
+        }
     });
 
     // The first row is already marked active in the markup, so the chapter is
-    // composed before this module runs. Announce it to the world only.
-    const initialForm = rows[0].dataset.form;
-    if (director && initialForm) director.setFocus(initialForm);
+    // composed before this module runs. Announce it to the frame only — and
+    // again once the frame actually arrives, since it may load later.
+    render(0);
+    focusForm(rows[0].dataset.form);
+
+    return {
+        /** Called by the bootstrap once the 3D module has resolved. */
+        attach(director) {
+            frame.director = director;
+            focusForm(rows[currentIndex]?.dataset.form);
+        },
+    };
 }

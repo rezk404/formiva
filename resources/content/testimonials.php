@@ -36,4 +36,12 @@ return [
         'company' => 'Aether',
         'project' => 'aether',
     ],
+    [
+        'index' => '04',
+        'quote' => 'They asked to see our actual stock count before they asked what modules we wanted. Every ERP vendor before them did it backwards.',
+        'name' => 'Hana Kamel',
+        'role' => 'Operations Director',
+        'company' => 'Ledgerline',
+        'project' => 'ledgerline',
+    ],
 ];

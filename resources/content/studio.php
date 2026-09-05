@@ -12,8 +12,8 @@ return [
     'headline' => ['We build digital systems', 'that outlive their launch.'],
 
     'story' => [
-        'FORMIVA began in 2016 in a converted print works in Lisbon, with three people and one rule: nothing in a deck that we cannot build.',
-        'Nineteen of us now — designers, engineers, a researcher and a motion director — working with teams who have something specific to make and very little patience for theatre.',
+        'FORMIVA started in 2016 with one rule: nothing in a deck that we cannot build. Three people, and a refusal to hand a client a render of something we had not tested.',
+        'Nineteen of us now — designers, engineers, a researcher and a motion director — split evenly between the visible half of the work and the operational half most agencies skip. We design the storefront and implement the ERP behind it, because a beautiful front end running on a spreadsheet is not a finished project.',
     ],
 
     /*
@@ -36,12 +36,17 @@ return [
             'title' => 'We hand over the keys.',
             'body' => 'Documented, instrumented, and with your team already using it. No retainer that exists to keep the lights on.',
         ],
+        [
+            'index' => '04',
+            'title' => 'We document what we automate.',
+            'body' => 'A workflow nobody can explain is a liability with a user interface. Every system we implement ships with the runbook, not just the login.',
+        ],
     ],
 
     'stats' => [
         ['value' => '48', 'suffix' => '+', 'label' => 'Products launched', 'note' => 'Since 2016'],
         ['value' => '24', 'suffix' => '', 'label' => 'Markets reached', 'note' => 'Client footprint'],
         ['value' => '91', 'suffix' => '%', 'label' => 'Returning clients', 'note' => 'Second engagement'],
-        ['value' => '19', 'suffix' => '', 'label' => 'People', 'note' => 'Lisbon &amp; remote'],
+        ['value' => '19', 'suffix' => '', 'label' => 'People', 'note' => 'Cairo &amp; remote'],
     ],
 ];

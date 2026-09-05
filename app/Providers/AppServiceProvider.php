@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Content\ContentRepository;
 use App\Content\StaticContent;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +22,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        /*
+         | The layout needs site settings on every render — including on the
+         | error pages, which no controller of ours ever reaches. Binding it
+         | once here means a 404 renders with the real navigation and footer
+         | instead of Laravel's unbranded default, and controllers stop
+         | repeating the same line in every method.
+         |
+         | Explicitly passed data still wins: this only fills the gap.
+         */
+        View::composer('layouts.app', function ($view): void {
+            if (! array_key_exists('site', $view->getData())) {
+                $view->with('site', app(ContentRepository::class)->site());
+            }
+        });
     }
 }

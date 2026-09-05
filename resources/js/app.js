@@ -1,111 +1,190 @@
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Lenis from 'lenis';
-import { initWorld } from './three/director.js';
+import {
+    gsap,
+    ScrollTrigger,
+    initScroll,
+    initAnchors,
+    settleInitialHash,
+    lockScroll,
+    unlockScroll,
+    refreshScroll,
+} from './core/scroll.js';
 import { initServices } from './chapters/services.js';
 import { initCursor } from './core/cursor.js';
 import { initContactForm } from './core/contact.js';
+import { qs, qsa, on, focusables, fontsReady } from './lib/dom.js';
+import { env } from './lib/env.js';
 
-gsap.registerPlugin(ScrollTrigger);
-
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const touch = matchMedia('(pointer: coarse)').matches;
-
-function initSmoothScroll() {
-    if (reducedMotion || touch) return null;
-    const lenis = new Lenis({ duration: 0.9, smoothWheel: true, syncTouch: false });
-    lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => lenis.raf(time * 1000));
-    gsap.ticker.lagSmoothing(0);
-    return lenis;
-}
+/**
+ * Bootstrap.
+ *
+ * Everything below is an enhancement over a page that already works: the
+ * document is readable, navigable and submittable with none of it running.
+ * Each piece asks lib/env.js whether it is welcome before it does anything.
+ */
 
 function initMobileMenu() {
-    const menu = document.querySelector('.fv-mobile');
-    const toggles = document.querySelectorAll('[data-menu-toggle]');
+    const menu = qs('.fv-mobile');
+    const toggles = qsa('[data-menu-toggle]');
     if (!menu || !toggles.length) return;
+
+    let opener = null;
+
+    const isOpen = () => menu.classList.contains('is-open');
+
     const setOpen = (open) => {
+        if (open === isOpen()) return;
+
         menu.classList.toggle('is-open', open);
         menu.setAttribute('aria-hidden', String(!open));
         toggles.forEach((button) => button.setAttribute('aria-expanded', String(open)));
-        document.body.classList.toggle('is-locked', open);
+
+        if (open) {
+            opener = document.activeElement;
+            // Reference-counted, and it stops Lenis as well as the document —
+            // `overflow: hidden` alone does not hold a smooth-scrolled page.
+            lockScroll();
+            focusables(menu)[0]?.focus();
+        } else {
+            unlockScroll();
+            // Return the keyboard where it came from, not to the top of the
+            // document.
+            if (opener instanceof HTMLElement) opener.focus();
+            opener = null;
+        }
     };
-    toggles.forEach((button) => button.addEventListener('click', () => setOpen(!menu.classList.contains('is-open'))));
-    menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setOpen(false)));
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && menu.classList.contains('is-open')) setOpen(false);
+
+    toggles.forEach((button) => on(button, 'click', () => setOpen(!isOpen())));
+
+    // Delegated: the panel's links are the only things inside it that should
+    // close it, and they may be re-rendered.
+    on(menu, 'click', (event) => {
+        if (event.target instanceof Element && event.target.closest('a')) setOpen(false);
+    });
+
+    on(document, 'keydown', (event) => {
+        if (!isOpen()) return;
+
+        if (event.key === 'Escape') {
+            setOpen(false);
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        // A panel covering the page must not leak focus to the document
+        // behind it.
+        const items = focusables(menu);
+        if (!items.length) return;
+
+        const first = items[0];
+        const last = items[items.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
     });
 }
 
+/**
+ * The nav inverts to match whichever chapter is behind it. Which link is
+ * "current" is a property of the page being viewed, not scroll position —
+ * navbar.blade.php sets that server-side from the route name — so this only
+ * ever has one job.
+ */
 function initNavTheme() {
-    const nav = document.querySelector('.fv-nav');
+    const nav = qs('.fv-nav');
     if (!nav) return;
-    const sections = [...document.querySelectorAll('[data-theme]')];
-    const navLinks = [...nav.querySelectorAll('.fv-nav__links a')];
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            const theme = entry.target.dataset.theme;
-            nav.classList.toggle('is-light', theme === 'light');
-            navLinks.forEach((link) => {
-                const href = link.getAttribute('href') || '';
-                const isCurrent = href.endsWith(`#${entry.target.id}`) || (entry.target.id === 'about' && href.endsWith('#about'));
-                link.classList.toggle('is-current', isCurrent);
-                if (isCurrent) link.setAttribute('aria-current', 'location');
-                else link.removeAttribute('aria-current');
+
+    const sections = qsa('[data-theme]');
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+        (entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                nav.classList.toggle('is-light', entry.target.dataset.theme === 'light');
             });
-        });
-    }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+        },
+        { rootMargin: '-35% 0px -55% 0px', threshold: 0 }
+    );
+
     sections.forEach((section) => observer.observe(section));
 }
 
-function normalizeHomeLinks() {
-    // The same navigation is rendered on detail pages. Relative fragments
-    // belong to the homepage, so resolve them once without duplicating nav.
-    document.querySelectorAll('.fv-nav__brand, .fv-nav__cta').forEach((link) => {
-        const fragment = link.getAttribute('href');
-        if (fragment?.startsWith('#')) link.setAttribute('href', `/${fragment}`);
-    });
-    document.querySelectorAll('.fv-nav__cta, .fv-mobile a[href$="#contact"]').forEach((link) => {
-        link.setAttribute('href', '/start-a-project');
-    });
-}
-
 function initReveal() {
-    if (reducedMotion) return;
-    const groups = document.querySelectorAll('.fv-service, .fv-project, .fv-insight, .fv-case-step, .fv-stat');
-    groups.forEach((el) => {
-        gsap.fromTo(el, { y: 28, opacity: 0 }, {
-            y: 0, opacity: 1, duration: 0.8, ease: 'power3.out',
-            scrollTrigger: { trigger: el, start: 'top 88%', once: true }
-        });
+    if (!env.animate) return;
+
+    qsa('.fv-service, .fv-project, .fv-insight, .fv-case-step, .fv-stat, .fv-trust__row, .fv-intro__note').forEach((el) => {
+        gsap.fromTo(
+            el,
+            { y: 14, opacity: 0 },
+            {
+                y: 0,
+                opacity: 1,
+                duration: 0.5,
+                ease: 'power2.out',
+                scrollTrigger: { trigger: el, start: 'top 90%', once: true },
+            }
+        );
     });
 }
 
-function initHeroMotion() {
-    const heroFrame = document.querySelector('.fv-hero__frame');
-    if (!heroFrame || reducedMotion || touch) return;
-    window.addEventListener('pointermove', (event) => {
-        const x = (event.clientX / window.innerWidth - 0.5) * 2;
-        const y = (event.clientY / window.innerHeight - 0.5) * 2;
-        gsap.to(heroFrame, { rotateY: x * 4, rotateX: y * -3, duration: 0.8, ease: 'power3.out', overwrite: true });
-    }, { passive: true });
+/**
+ * The frame is loaded only where it can actually be seen.
+ *
+ * Three.js is by far the heaviest thing this site can download, and most
+ * pages never show the canvas — they paint an opaque ground over it. Those
+ * pages should not pay for it at all, so the import is dynamic and gated on
+ * the same attribute the CSS uses to clear a ground for it.
+ */
+async function initFrame(services) {
+    if (!qs('[data-world-visible]')) return;
+
+    try {
+        const { initWorld } = await import('./three/director.js');
+        const director = initWorld();
+
+        // The accordion was wired up long before this resolved; hand it the
+        // director so the open pillar's geometry catches up.
+        if (director) services?.attach(director);
+    } catch {
+        // A failed chunk load is not a broken page: every chapter reads
+        // perfectly well without the object behind it.
+    }
 }
 
 function boot() {
     document.documentElement.classList.add('js');
-    initSmoothScroll();
+
+    initScroll();
+    initAnchors();
     initMobileMenu();
-    normalizeHomeLinks();
     initNavTheme();
     initReveal();
-    initHeroMotion();
     initCursor();
     initContactForm();
-    const director = initWorld();
-    initServices(director);
-    window.addEventListener('load', () => ScrollTrigger.refresh(), { once: true });
+
+    // The accordion must work the moment the page does, so it is wired up
+    // now and handed the director later, if and when the 3D chunk arrives.
+    const services = initServices();
+    initFrame(services);
+
+    // Triggers are measured against the wrong layout until the webfont has
+    // swapped in — Archivo is a variable font and settles noticeably late.
+    fontsReady().then(() => {
+        refreshScroll();
+        settleInitialHash();
+    });
+
+    on(window, 'load', () => refreshScroll(), { once: true });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
-else boot();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+    boot();
+}
