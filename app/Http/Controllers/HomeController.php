@@ -95,6 +95,7 @@ class HomeController extends Controller
         return view('pages.contact', [
             'site' => $this->content->site(),
             'services' => $this->content->services(),
+            'intake' => $this->content->intake(),
             'title' => 'Start a project — FORMIVA',
             'description' => 'Start a project with FORMIVA.',
         ]);

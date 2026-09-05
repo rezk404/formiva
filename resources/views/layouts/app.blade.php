@@ -71,13 +71,12 @@
 </head>
 
 <body>
-    <a class="skip" href="{{ route('home') }}#hero">Skip to content</a>
+    <a class="skip" href="#main">Skip to content</a>
 
     <x-world />
 
     <x-navbar :site="$site" />
     <x-mobile-menu :site="$site" />
-    <x-cursor />
 
     <main class="shell" id="main">
         @yield('content')

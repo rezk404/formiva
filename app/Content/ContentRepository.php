@@ -60,4 +60,7 @@ interface ContentRepository
 
     /** Client wordmarks. */
     public function clients(): array;
+
+    /** Project intake options and qualification rules. */
+    public function intake(): array;
 }

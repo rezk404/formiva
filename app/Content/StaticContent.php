@@ -123,6 +123,11 @@ final class StaticContent implements ContentRepository
         return $this->load('clients');
     }
 
+    public function intake(): array
+    {
+        return $this->load('intake');
+    }
+
     /**
      * @throws RuntimeException when a content file is missing — failing loudly
      *                          in development beats rendering an empty chapter.

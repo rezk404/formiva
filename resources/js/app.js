@@ -47,7 +47,13 @@ function initNavTheme() {
             if (!entry.isIntersecting) return;
             const theme = entry.target.dataset.theme;
             nav.classList.toggle('is-light', theme === 'light');
-            navLinks.forEach((link) => link.classList.toggle('is-current', link.getAttribute('href') === `#${entry.target.id}`));
+            navLinks.forEach((link) => {
+                const href = link.getAttribute('href') || '';
+                const isCurrent = href.endsWith(`#${entry.target.id}`) || (entry.target.id === 'about' && href.endsWith('#about'));
+                link.classList.toggle('is-current', isCurrent);
+                if (isCurrent) link.setAttribute('aria-current', 'location');
+                else link.removeAttribute('aria-current');
+            });
         });
     }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
     sections.forEach((section) => observer.observe(section));

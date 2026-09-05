@@ -314,9 +314,41 @@
 .fv-contact-page__form input:focus, .fv-contact-page__form select:focus, .fv-contact-page__form textarea:focus { border-color: var(--fv-accent); box-shadow: 0 0 0 3px rgba(240,100,56,.18); }
 .fv-contact-page__message, .fv-contact-page__notice { grid-column: 1 / -1; }
 .fv-contact-page__notice { min-height: 1.5em; margin: 0; color: var(--fv-accent-soft); line-height: 1.5; }
+  .fv-intake { display: block; }
+  .fv-intake__progress { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px; margin-bottom: 42px; color: rgba(255,255,255,.48); font: .65rem var(--font-mono); letter-spacing: .08em; }
+  .fv-intake__progress span:first-child { color: var(--fv-accent-soft); }
+  .fv-intake__progress div { height: 1px; background: rgba(255,255,255,.16); }
+  .fv-intake__progress i { display: block; height: 2px; background: var(--fv-accent); transition: width .35s var(--fv-ease); }
+  .fv-intake fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+  .fv-intake legend { margin-bottom: 28px; color: #fff; font-size: clamp(1.7rem, 3vw, 2.7rem); letter-spacing: -.04em; }
+  .fv-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .fv-form-grid .fv-contact-page__message { grid-column: 1 / -1; }
+  .fv-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .fv-choice { position: relative; display: block !important; cursor: pointer; }
+  .fv-choice input { position: absolute; width: 1px !important; height: 1px; opacity: 0; }
+  .fv-choice span { display: block; min-height: 52px; padding: 16px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; color: rgba(255,255,255,.72); font: .72rem var(--font-display); letter-spacing: 0; text-transform: none; transition: border-color .2s, background .2s, color .2s; }
+  .fv-choice:hover span, .fv-choice input:focus-visible + span { border-color: var(--fv-accent); color: #fff; }
+  .fv-choice input:checked + span { border-color: var(--fv-accent); background: rgba(240,100,56,.14); color: #fff; }
+  .fv-intake__hint, .fv-file-drop span { color: rgba(255,255,255,.52); font-size: .9rem; line-height: 1.55; }
+  .fv-file-drop { display: grid !important; gap: 14px; padding: 38px 24px; border: 1px dashed rgba(255,255,255,.3); text-align: center; cursor: pointer; }
+  .fv-file-drop input { position: absolute; width: 1px !important; height: 1px; opacity: 0; }
+  .fv-intake__summary dl { margin: 0; border-top: 1px solid rgba(255,255,255,.16); }
+  .fv-intake__summary dl div { display: flex; justify-content: space-between; gap: 20px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.16); }
+  .fv-intake__summary dt { color: rgba(255,255,255,.46); font: .65rem var(--font-mono); text-transform: uppercase; }
+  .fv-intake__summary dd { margin: 0; color: #fff; text-align: right; }
+  .fv-intake__estimate { display: grid; gap: 8px; margin-top: 24px; padding: 20px; border-left: 2px solid var(--fv-accent); background: rgba(240,100,56,.09); }
+  .fv-intake__estimate strong { font: .65rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fv-accent-soft); }
+  .fv-intake__estimate span { font-size: 1.35rem; }
+  .fv-intake__estimate small { color: rgba(255,255,255,.56); line-height: 1.5; }
+  .fv-intake__actions { display: flex; gap: 10px; margin-top: 32px; }
+  .fv-intake__actions .fv-btn { min-width: 0; }
+  .fv-intake__promise { display: flex; gap: 16px; margin-top: 56px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.48); font: .65rem var(--font-mono); line-height: 1.7; text-transform: uppercase; }
+  .fv-intake__promise span { color: var(--fv-accent-soft); }
+  .fv-intake__promise p { margin: 0; }
 @media (max-width: 700px) {
   .fv-list-page, .fv-contact-page { padding: 100px 0 72px; }
-  .fv-list-page__item, .fv-contact-page__grid, .fv-contact-page__form { grid-template-columns: 1fr; }
+  .fv-list-page__item, .fv-contact-page__grid { grid-template-columns: 1fr; }
+  .fv-form-grid, .fv-choice-grid { grid-template-columns: 1fr; }
   .fv-list-page__item { gap: 10px; }
   .fv-list-page__item small { margin-top: 6px; }
 }
