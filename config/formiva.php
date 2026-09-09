@@ -32,4 +32,8 @@ return [
         'ttl' => env('FORMIVA_CONTENT_CACHE_TTL', 3600),
     ],
 
+    'admin' => [
+        'login_throttle' => 'admin-login',
+    ],
+
 ];

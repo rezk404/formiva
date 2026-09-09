@@ -9,6 +9,9 @@ use App\Content\CachedContent;
 use App\Content\DatabaseContent;
 use App\Content\StaticContent;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -36,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        RateLimiter::for('admin-login', function (Request $request): Limit {
+            return Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
+        });
+
         /*
          | The layout needs site settings on every render — including on the
          | error pages, which no controller of ours ever reaches. Binding it
