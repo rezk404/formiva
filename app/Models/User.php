@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -43,5 +45,41 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /** @return HasMany<Inquiry, $this> */
+    public function assignedInquiries(): HasMany
+    {
+        return $this->hasMany(Inquiry::class, 'assigned_to');
+    }
+
+    /** @return HasMany<InquiryNote, $this> */
+    public function inquiryNotes(): HasMany
+    {
+        return $this->hasMany(InquiryNote::class);
+    }
+
+    /** @return HasMany<Insight, $this> */
+    public function insights(): HasMany
+    {
+        return $this->hasMany(Insight::class, 'author_id');
+    }
+
+    /** @return HasMany<Project, $this> */
+    public function createdProjects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'created_by');
+    }
+
+    /** @return HasMany<ActivityLog, $this> */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
+    /** @return BelongsTo<Media, $this> */
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'avatar_media_id');
     }
 }
