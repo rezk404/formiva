@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Content\ContentRepository;
+use App\Content\CachedContent;
+use App\Content\DatabaseContent;
 use App\Content\StaticContent;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -13,10 +16,21 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // The one line that changes when the CMS lands. Point the contract at
-        // a DatabaseContent implementation and every view keeps working.
         $this->app->singleton(ContentRepository::class, function (): ContentRepository {
-            return new StaticContent(resource_path('content'));
+            $source = match (config('formiva.content_source', 'static')) {
+                'database' => new DatabaseContent(),
+                default => new StaticContent(resource_path('content')),
+            };
+
+            if (! config('formiva.content_cache.enabled', false)) {
+                return $source;
+            }
+
+            return new CachedContent(
+                $source,
+                app(CacheRepository::class),
+                (int) config('formiva.content_cache.ttl', 3600),
+            );
         });
     }
 

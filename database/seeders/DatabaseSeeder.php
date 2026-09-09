@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Content\ContentImporter;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -13,7 +14,6 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        // Phase 1: no default users or demo content.
-        // Development-only seeding can be added in later phases.
+        (new ContentImporter(resource_path('content')))->import();
     }
 }
