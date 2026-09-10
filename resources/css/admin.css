@@ -3073,6 +3073,20 @@ a.admin-metric:hover {
 .admin-command__item small { color: var(--muted); font-size: var(--t-xs); }
 .admin-command__empty { padding: 24px 10px; color: var(--muted); text-align: center; }
 
+.admin-detail-list { display: grid; gap: 0; }
+.admin-detail-list > div { display: grid; grid-template-columns: minmax(110px, 0.35fr) minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.admin-detail-list dt { color: var(--muted); font-size: var(--t-sm); }
+.admin-detail-list dd { margin: 0; font-size: var(--t-base); }
+.admin-inquiry-copy { display: grid; gap: 8px; margin-top: 24px; }
+.admin-inquiry-copy h3 { margin-top: 14px; font-size: var(--t-sm); }
+.admin-inquiry-copy p { color: var(--muted); white-space: pre-wrap; }
+.admin-note-list, .admin-activity-list { display: grid; gap: 12px; }
+.admin-note, .admin-activity { padding: 14px; border-radius: var(--radius-sm); background: var(--paper); }
+.admin-note p { white-space: pre-wrap; }
+.admin-note small, .admin-activity small { display: block; margin-top: 8px; color: var(--muted); font-size: var(--t-xs); }
+.admin-note-form { display: grid; gap: 10px; margin-top: 20px; }
+.admin-activity { display: grid; gap: 4px; border-left: 2px solid var(--line); }
+
 .admin-form-actions {
     position: sticky;
     z-index: 10;

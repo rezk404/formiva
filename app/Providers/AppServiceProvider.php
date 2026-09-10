@@ -43,6 +43,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });
 
+        RateLimiter::for('inquiries', function (Request $request): Limit {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
         /*
          | The layout needs site settings on every render — including on the
          | error pages, which no controller of ours ever reaches. Binding it

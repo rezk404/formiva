@@ -12,6 +12,9 @@
         'Overview' => [
             ['route' => 'admin.dashboard', 'match' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'ability' => null],
         ],
+        'Operations' => [
+            ['route' => 'admin.inquiries.index', 'match' => 'admin.inquiries.*', 'label' => 'Inquiries', 'icon' => 'inbox', 'ability' => ['viewAny', \App\Models\Inquiry::class]],
+        ],
         'Content' => [
             ['route' => 'admin.services.index', 'match' => 'admin.services.*', 'label' => 'Services', 'icon' => 'services', 'ability' => ['viewAny', \App\Models\Service::class]],
             ['route' => 'admin.insights.index', 'match' => 'admin.insights.*', 'label' => 'Insights', 'icon' => 'insights', 'ability' => ['viewAny', \App\Models\Insight::class]],

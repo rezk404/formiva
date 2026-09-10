@@ -10,6 +10,7 @@
     <meta name="author" content="{{ $site['brand']['name'] }}">
     <meta name="theme-color" content="{{ $site['meta']['theme_color'] }}">
     <meta name="color-scheme" content="light dark">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <link rel="canonical" href="{{ url()->current() }}">
 

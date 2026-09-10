@@ -2,6 +2,8 @@
 
 return [
 
+    'intake' => require resource_path('content/intake.php'),
+
     /*
     |--------------------------------------------------------------------------
     | Content Source
@@ -43,6 +45,10 @@ return [
 
     'admin' => [
         'login_throttle' => 'admin-login',
+    ],
+
+    'inquiries' => [
+        'recipient' => env('FORMIVA_INQUIRY_RECIPIENT', env('MAIL_FROM_ADDRESS', 'hello@formiva.studio')),
     ],
 
 ];
