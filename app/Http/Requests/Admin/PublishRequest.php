@@ -23,7 +23,7 @@ final class PublishRequest extends FormRequest
     {
         // The same request serves services and insights; whichever the route
         // bound is the record whose policy decides.
-        $record = $this->route('service') ?? $this->route('insight');
+        $record = $this->route('service') ?? $this->route('insight') ?? $this->route('project');
 
         return $record !== null && Gate::allows('update', $record);
     }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InsightController;
 use App\Http\Controllers\Admin\IntakeOptionController;
 use App\Http\Controllers\Admin\ProcessStageController;
+use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SiteSettingsController;
@@ -74,6 +75,12 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 		Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
 		// ---- Content ---------------------------------------------------
+
+		Route::post('/projects/{project}/move', [ProjectController::class, 'move'])->name('projects.move');
+		Route::post('/projects/{project}/featured', [ProjectController::class, 'toggleFeatured'])->name('projects.featured');
+		Route::post('/projects/publish/{project}', [ProjectController::class, 'publish'])->name('projects.publish');
+		Route::get('/projects/{project}/preview', [ProjectController::class, 'preview'])->name('projects.preview');
+		Route::resource('projects', ProjectController::class)->except('show');
 
 		Route::post('/services/{service}/move', [ServiceController::class, 'move'])->name('services.move');
 		Route::post('/services/publish/{service}', [ServiceController::class, 'publish'])->name('services.publish');

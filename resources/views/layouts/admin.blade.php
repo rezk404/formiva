@@ -16,6 +16,9 @@
             ['route' => 'admin.services.index', 'match' => 'admin.services.*', 'label' => 'Services', 'icon' => 'services', 'ability' => ['viewAny', \App\Models\Service::class]],
             ['route' => 'admin.insights.index', 'match' => 'admin.insights.*', 'label' => 'Insights', 'icon' => 'insights', 'ability' => ['viewAny', \App\Models\Insight::class]],
         ],
+        'Work' => [
+            ['route' => 'admin.projects.index', 'match' => 'admin.projects.*', 'label' => 'Projects', 'icon' => 'projects', 'ability' => ['viewAny', \App\Models\Project::class]],
+        ],
         /*
          | About is one entry with five screens, not five entries. The story,
          | the people, the process, the proof and the numbers all answer the

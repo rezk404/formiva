@@ -16,6 +16,7 @@
     $paths = [
         'dashboard' => '<path d="M2 2h5v5H2zM9 2h5v9H9zM2 9h5v5H2z"/>',
         'services' => '<path d="M2 3h12M2 8h12M2 13h8"/>',
+        'projects' => '<path d="M2 3h12v10H2zM5 6h6M5 9h4"/>',
         'insights' => '<path d="M3 2h10v12H3zM5.5 5h5M5.5 8h5M5.5 11h3"/>',
         'testimonials' => '<path d="M2 3h12v8H6l-4 3z"/>',
         'team' => '<path d="M6 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM2 14v-1.5C2 11 3.5 10 6 10s4 1 4 2.5V14M11 4.5a1.6 1.6 0 1 1 0 3.2M14 14v-1.4c0-1.1-.8-1.9-2.2-2.2"/>',
