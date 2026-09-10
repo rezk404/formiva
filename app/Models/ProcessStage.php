@@ -19,6 +19,7 @@ class ProcessStage extends Model
         'span_start',
         'span_end',
         'weight',
+        'overlap',
         'position',
     ];
 
@@ -29,6 +30,7 @@ class ProcessStage extends Model
             'span_start' => 'integer',
             'span_end' => 'integer',
             'weight' => 'float',
+            'overlap' => 'boolean',
             'position' => 'integer',
         ];
     }
@@ -37,5 +39,11 @@ class ProcessStage extends Model
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('position')->orderBy('id');
+    }
+
+    /** How much of the timeline rule this stage occupies, as a percentage. */
+    public function spanWidth(): int
+    {
+        return max(0, $this->span_end - $this->span_start);
     }
 }

@@ -26,6 +26,10 @@ class TeamMember extends Model
         'since_year',
         'email',
         'photo_media_id',
+        'plate_seed',
+        'plate_variant',
+        'plate_ratio',
+        'alt',
         'position',
         'is_published',
     ];
@@ -35,6 +39,7 @@ class TeamMember extends Model
     {
         return [
             'since_year' => 'integer',
+            'plate_seed' => 'integer',
             'is_published' => 'boolean',
             'position' => 'integer',
         ];
@@ -50,6 +55,22 @@ class TeamMember extends Model
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('position')->orderBy('id');
+    }
+
+    /** @param Builder<static> $query */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('name', 'like', "%{$term}%")
+                ->orWhere('role', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%");
+        });
     }
 
     /** @return BelongsTo<Media, $this> */

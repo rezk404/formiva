@@ -47,7 +47,44 @@ Two consequences worth knowing:
 
 ## Moving to a database
 
-Keep `ContentRepository` and replace `StaticContent` with an Eloquent-backed
-implementation returning the same shapes; swap the binding in
-`AppServiceProvider`. The normalisation above matters more there than here — a
+This has happened, and it is now the default. `App\Content\DatabaseContent`
+returns the same shapes from Eloquent, and `tests/Feature/ContentParityTest.php`
+holds the two side by side so they cannot drift.
+
+```
+FORMIVA_CONTENT=database   # default — the CMS drives the site
+FORMIVA_CONTENT=static     # take the CMS out of the loop deliberately
+```
+
+Everything else — routes, controllers, Blade, the frontend JavaScript — is
+unchanged by the switch, which was the point of the seam. The test suite pins
+itself to `static` in `phpunit.xml`, because its public smoke tests render
+against an empty database on purpose; the database path is covered separately
+by `DatabaseContentIntegrationTest`.
+
+A database that has been migrated but not yet seeded still renders: the
+singleton values below fall back to these files, so a first deploy shows the
+shipped content rather than a stack trace.
+
+### Where each file ends up
+
+`php artisan db:seed` runs `App\Content\ContentImporter`, which lifts these
+files into the tables the CMS edits. It is idempotent: running it again
+refreshes the imported rows and leaves anything added since through the
+workspace alone.
+
+Most files map to a table. Three kinds of value have no table and live in
+`settings` under the `content` group instead:
+
+- `site.php` → `content.site`, edited whole under **Site settings**.
+- `clients.php` → `content.clients`, and per-project gallery metadata →
+  `content.project-meta`. Neither has a CMS screen yet.
+- The framing prose around a chapter that has no repetition in it: the studio
+  eyebrow, headline and story (`content.studio`), the process eyebrow,
+  headline and lede (`content.process`), and the intake estimator rules
+  (`content.intake`). The records those chapters are actually made of —
+  positions, statistics, stages, options — are rows, and the CMS edits them
+  as rows.
+
+The normalisation above matters more against a database than against a file: a
 nullable column is a far easier mistake to make than a missing array key.

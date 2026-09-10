@@ -25,5 +25,13 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            The suite runs against the files, not the CMS tables: most feature
+            tests use an empty database on purpose. Tests that need the
+            database source bind it themselves — see
+            tests/Feature/DatabaseContentIntegrationTest.php.
+        -->
+        <env name="FORMIVA_CONTENT" value="static"/>
+        <env name="FORMIVA_CONTENT_CACHE" value="false"/>
     </php>
 </phpunit>

@@ -152,6 +152,9 @@
         </div>
     </section>
 
+    {{-- caseStudy() returns an empty array when nothing is published, which
+         is a state the database source can reach and the files never could. --}}
+    @if (! empty($caseStudy['title']))
     <section class="fv-case" id="case-study" data-world="disperse" data-theme="dark">
         <div class="fv-container">
             <div class="fv-case__head">
@@ -181,6 +184,7 @@
             </div>
         </div>
     </section>
+    @endif
 
     <section class="fv-studio" id="about" data-world="stair" data-theme="light">
         <div class="fv-container">
@@ -228,15 +232,20 @@
         </div>
     </section>
 
-    <section class="fv-proof" id="proof" data-world="stair" data-theme="dark">
-        <div class="fv-container">
-            <div class="fv-section-label fv-section-label--dark"><span class="fv-mark" aria-hidden="true"></span><span class="fv-spec">Proof</span></div>
-            <div class="fv-proof__quote">
-                <blockquote>{{ strip_tags($testimonials[0]['quote']) }}</blockquote>
-                <div class="fv-proof__person"><strong>{{ $testimonials[0]['name'] }}</strong><span>{{ $testimonials[0]['role'] }} · {{ $testimonials[0]['company'] }}</span></div>
+    {{-- Every quote can now be unpublished from the CMS, so the chapter has
+         to be able to not exist. A section with an empty blockquote in it
+         reads worse than no section at all. --}}
+    @if (count($testimonials) > 0)
+        <section class="fv-proof" id="proof" data-world="stair" data-theme="dark">
+            <div class="fv-container">
+                <div class="fv-section-label fv-section-label--dark"><span class="fv-mark" aria-hidden="true"></span><span class="fv-spec">Proof</span></div>
+                <div class="fv-proof__quote">
+                    <blockquote>{{ strip_tags($testimonials[0]['quote']) }}</blockquote>
+                    <div class="fv-proof__person"><strong>{{ $testimonials[0]['name'] }}</strong><span>{{ $testimonials[0]['role'] }} · {{ $testimonials[0]['company'] }}</span></div>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+    @endif
 
     <section class="fv-insights" id="insights" data-world="resolve" data-theme="light">
         <div class="fv-container">

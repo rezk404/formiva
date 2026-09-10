@@ -4,20 +4,48 @@ declare(strict_types=1);
 
 namespace App\Content;
 
+use App\Enums\IntakeOptionKind;
 use App\Models\CaseStudy;
 use App\Models\Insight;
 use App\Models\IntakeOption;
+use App\Models\ProcessStage;
 use App\Models\Project;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Models\StudioPosition;
+use App\Models\StudioStat;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
 use Illuminate\Support\Collection;
+use Throwable;
 
+/**
+ * The database implementation of the public content contract.
+ *
+ * Every method here returns exactly the array shape StaticContent returns
+ * for the same call — tests/Feature/ContentParityTest holds the two side by
+ * side and will not let them drift. That equality is the whole reason the
+ * public templates never had to learn where content comes from.
+ *
+ * Two kinds of value live in `settings`:
+ *
+ *   - Chapter framing that has no table of its own (the studio eyebrow and
+ *     headline, the process lede, the intake qualification rules).
+ *   - Records the CMS does not yet own (client wordmarks, per-project
+ *     gallery metadata).
+ *
+ * Everything else resolves from its own table, which is what makes the CMS
+ * the source of truth rather than a second copy of it.
+ */
 final class DatabaseContent implements ContentRepository
 {
     /** @var array<string, array<string, mixed>>|null */
     private ?array $projectMetadata = null;
+
+    /** @var array<string, mixed>|null */
+    private ?array $settings = null;
+
+    private ?StaticContent $files = null;
 
     public function __construct(private readonly ContentPresenter $presenter = new ContentPresenter())
     {
@@ -25,7 +53,7 @@ final class DatabaseContent implements ContentRepository
 
     public function site(): array
     {
-        return $this->setting('site', []);
+        return $this->singleton('site', 'site');
     }
 
     public function services(): array
@@ -119,47 +147,101 @@ final class DatabaseContent implements ContentRepository
         ], $this->projectArray($study->project));
     }
 
+    /**
+     * Framing from settings, substance from the two studio tables. The
+     * CMS edits positions and statistics as records; the eyebrow, headline
+     * and story are prose with no repetition and stay in the singleton.
+     */
     public function studio(): array
     {
-        return $this->setting('studio', []);
+        $framing = $this->singleton('studio', 'studio');
+
+        return [
+            'eyebrow' => (string) ($framing['eyebrow'] ?? 'The studio'),
+            'headline' => array_values((array) ($framing['headline'] ?? [])),
+            'story' => array_values((array) ($framing['story'] ?? [])),
+            'positions' => StudioPosition::query()->ordered()->get()
+                ->map(static fn (StudioPosition $position): array => [
+                    'index' => $position->index_label,
+                    'title' => $position->title,
+                    'body' => $position->body,
+                ])->values()->all(),
+            'stats' => StudioStat::query()->ordered()->get()
+                ->map(static fn (StudioStat $stat): array => [
+                    'value' => $stat->value,
+                    'suffix' => $stat->suffix,
+                    'label' => $stat->label,
+                    'note' => $stat->note,
+                ])->values()->all(),
+        ];
     }
 
     public function process(): array
     {
-        return $this->setting('process', []);
+        $framing = $this->singleton('process', 'process');
+
+        return [
+            'eyebrow' => (string) ($framing['eyebrow'] ?? 'The system'),
+            'headline' => array_values((array) ($framing['headline'] ?? [])),
+            'lede' => (string) ($framing['lede'] ?? ''),
+            'stages' => ProcessStage::query()->ordered()->get()
+                ->map(static function (ProcessStage $stage): array {
+                    $shape = [
+                        'index' => $stage->index_label,
+                        'title' => $stage->title,
+                        'window' => $stage->window,
+                        'body' => $stage->body,
+                        'output' => $stage->output,
+                        'span' => [$stage->span_start, $stage->span_end],
+                        'weight' => $stage->weight,
+                    ];
+
+                    // Absent rather than false when it does not apply — the
+                    // static file has always expressed it that way, and the
+                    // template asks with a null-coalesce.
+                    if ($stage->overlap) {
+                        $shape['overlap'] = true;
+                    }
+
+                    return $shape;
+                })->values()->all(),
+        ];
     }
 
     public function team(): array
     {
-        $stored = $this->setting('team', null);
-
-        if (is_array($stored) && $stored !== []) {
-            return $stored;
-        }
-
-        return TeamMember::query()->published()->with('photo')->ordered()->get()->map(function (TeamMember $member): array {
-            return [
-                'index' => str_pad((string) $member->position, 2, '0', STR_PAD_LEFT),
-                'name' => $member->name,
-                'role' => $member->role,
-                'bio' => $member->bio,
-                'since' => (string) $member->since_year,
-                'plate' => $this->presenter->plate(null, $member->slug.'-plate', '3/4'),
-                'alt' => $member->photo?->alt ?? 'Portrait plate for '.$member->name.'.',
-            ];
-        })->all();
+        return TeamMember::query()->published()->with('photo')->ordered()->get()->values()
+            ->map(function (TeamMember $member, int $ordinal): array {
+                return [
+                    // Numbered by display order rather than by the stored
+                    // position, so deleting the second person does not leave
+                    // the studio page counting 01, 03, 04.
+                    'index' => str_pad((string) ($ordinal + 1), 2, '0', STR_PAD_LEFT),
+                    'name' => $member->name,
+                    'role' => $member->role,
+                    'bio' => $member->bio,
+                    'since' => (string) $member->since_year,
+                    'plate' => $this->presenter->plate([
+                        'seed' => $member->plate_seed,
+                        'variant' => $member->plate_variant,
+                        'ratio' => $member->plate_ratio,
+                    ], $member->slug.'-plate', '3/4'),
+                    'alt' => (string) ($member->alt ?: ($member->photo?->alt ?? 'Portrait plate for '.$member->name.'.')),
+                ];
+            })->all();
     }
 
     public function testimonials(): array
     {
-        return Testimonial::query()->published()->with(['client', 'project'])->ordered()->get()->map(static fn (Testimonial $testimonial): array => [
-            'index' => str_pad((string) $testimonial->position, 2, '0', STR_PAD_LEFT),
-            'quote' => $testimonial->quote,
-            'name' => $testimonial->author_name,
-            'role' => $testimonial->author_role,
-            'company' => $testimonial->company,
-            'project' => $testimonial->project?->slug,
-        ])->all();
+        return Testimonial::query()->published()->with(['client', 'project'])->ordered()->get()->values()
+            ->map(static fn (Testimonial $testimonial, int $ordinal): array => [
+                'index' => str_pad((string) ($ordinal + 1), 2, '0', STR_PAD_LEFT),
+                'quote' => $testimonial->quote,
+                'name' => $testimonial->author_name,
+                'role' => $testimonial->author_role,
+                'company' => $testimonial->company,
+                'project' => $testimonial->project?->slug,
+            ])->all();
     }
 
     public function insights(): array
@@ -177,23 +259,53 @@ final class DatabaseContent implements ContentRepository
 
     public function clients(): array
     {
-        return $this->setting('clients', []);
+        return $this->singleton('clients', 'clients');
     }
 
+    /**
+     * The intake form and its estimator read one nested array. Options are
+     * rows; the qualification rules that map a project group to a fit, a
+     * complexity and a timeline hint are prose-like configuration and stay
+     * in the singleton beside them.
+     */
     public function intake(): array
     {
-        $stored = $this->setting('intake', null);
+        $options = IntakeOption::query()->active()->ordered()->get()->groupBy(
+            static fn (IntakeOption $option): string => $option->kind->value,
+        );
 
-        if (is_array($stored) && $stored !== []) {
-            return $stored;
-        }
+        $labels = static function (Collection $options): array {
+            return $options->pluck('label')->values()->all();
+        };
 
-        return IntakeOption::query()->active()->ordered()->get()->groupBy(fn ($option): string => $option->kind->value)
-            ->map(fn (Collection $options): array => $options->map(static fn ($option): array => [
-                'value' => $option->value,
-                'label' => $option->label,
-                'group' => $option->group,
-            ])->values()->all())->all();
+        return [
+            'projectTypes' => $this->kind($options, IntakeOptionKind::ProjectType)
+                ->map(static fn (IntakeOption $option): array => [
+                    'value' => $option->value,
+                    'label' => $option->label,
+                    'group' => (string) $option->group,
+                ])->values()->all(),
+            'budgets' => $this->kind($options, IntakeOptionKind::Budget)
+                ->groupBy(static fn (IntakeOption $option): string => (string) $option->group)
+                ->map($labels)
+                ->all(),
+            'timelines' => $labels($this->kind($options, IntakeOptionKind::Timeline)),
+            'companySizes' => $labels($this->kind($options, IntakeOptionKind::CompanySize)),
+            'services' => $labels($this->kind($options, IntakeOptionKind::Service)),
+            'rules' => (array) ($this->singleton('intake', 'intake')['rules'] ?? []),
+        ];
+    }
+
+    /**
+     * @param  Collection<string, Collection<int, IntakeOption>>  $grouped
+     * @return Collection<int, IntakeOption>
+     */
+    private function kind(Collection $grouped, IntakeOptionKind $kind): Collection
+    {
+        /** @var Collection<int, IntakeOption> $options */
+        $options = $grouped->get($kind->value, new Collection());
+
+        return $options;
     }
 
     private function projectQuery()
@@ -247,14 +359,73 @@ final class DatabaseContent implements ContentRepository
         ]);
     }
 
+    /**
+     * Every value in the `content` settings group, in one query.
+     *
+     * A page render asks for the site, the studio framing, the process
+     * framing, the intake rules, the client wordmarks and the project
+     * metadata — six round trips for six rows in the same group. They are
+     * read once and memoised for the life of the request instead.
+     *
+     * @return array<string, mixed>
+     */
+    private function settings(): array
+    {
+        return $this->settings ??= Setting::query()
+            ->where('group', 'content')
+            ->get()
+            ->mapWithKeys(static fn (Setting $setting): array => [$setting->key => $setting->typedValue()])
+            ->all();
+    }
+
     private function setting(string $key, mixed $default): mixed
     {
-        return Setting::retrieve('content', $key, $default);
+        return $this->settings()[$key] ?? $default;
+    }
+
+    /**
+     * A settings singleton, falling back to the file it was seeded from.
+     *
+     * The rule is uniform and applies to every value in this group: the
+     * files are the defaults, the database overrides them. It is what lets a
+     * database that has been migrated but not yet seeded — a first deploy,
+     * a restored backup mid-import — render the site instead of fataling on
+     * a missing array key deep inside a template.
+     *
+     * @return array<string, mixed>
+     */
+    private function singleton(string $key, string $file): array
+    {
+        $stored = $this->setting($key, null);
+
+        if (is_array($stored) && $stored !== []) {
+            return $stored;
+        }
+
+        try {
+            return match ($file) {
+                'site' => $this->files()->site(),
+                'clients' => $this->files()->clients(),
+                'studio' => $this->files()->studio(),
+                'process' => $this->files()->process(),
+                'intake' => ['rules' => $this->files()->intake()['rules'] ?? []],
+                default => [],
+            };
+        } catch (Throwable) {
+            // The files are optional at runtime; a deployment that ships
+            // without them simply has no defaults to fall back to.
+            return [];
+        }
+    }
+
+    private function files(): StaticContent
+    {
+        return $this->files ??= new StaticContent(resource_path('content'));
     }
 
     /** @return array<string, array<string, mixed>> */
     private function projectMetadata(): array
     {
-        return $this->projectMetadata ??= Setting::retrieve('content', 'project-meta', []);
+        return $this->projectMetadata ??= (array) $this->setting('project-meta', []);
     }
 }

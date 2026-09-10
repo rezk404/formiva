@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ContentStatus;
+use App\Models\Concerns\Publishable;
 use Database\Factories\ServiceFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Service extends Model
 {
     /** @use HasFactory<ServiceFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, Publishable, SoftDeletes;
 
     /** @var list<string> */
     protected $fillable = [
@@ -45,20 +46,26 @@ class Service extends Model
         ];
     }
 
-    /** @param Builder<static> $query */
-    public function scopePublished(Builder $query): void
-    {
-        $query->where('status', ContentStatus::Published)
-            ->where(function (Builder $query): void {
-                $query->whereNull('published_at')
-                    ->orWhere('published_at', '<=', now());
-            });
-    }
-
-    /** @param Builder<static> $query */
+    /** @param  Builder<static>  $query */
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('position')->orderBy('id');
+    }
+
+    /** @param  Builder<static>  $query */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('title', 'like', "%{$term}%")
+                ->orWhere('slug', 'like', "%{$term}%")
+                ->orWhere('lede', 'like', "%{$term}%");
+        });
     }
 
     /** @return HasMany<ServiceItem, $this> */

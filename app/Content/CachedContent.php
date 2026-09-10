@@ -32,9 +32,21 @@ final class CachedContent implements ContentRepository
     public function clients(): array { return $this->remember('clients', fn (): array => $this->content->clients()); }
     public function intake(): array { return $this->remember('intake', fn (): array => $this->content->intake()); }
 
+    /**
+     * Invalidate everything by moving the version the keys are namespaced by.
+     *
+     * Written as a read-then-write rather than increment() because the
+     * counter does not exist until the first flush: increment() on a missing
+     * key lands on 1, which was also the default the keys already used, so
+     * the very first save after a deploy invalidated nothing and the edit
+     * stayed invisible for the rest of the TTL. Starting the default at 0
+     * and writing explicitly makes the first flush count like every other.
+     */
     public function flush(): bool
     {
-        return $this->cache->increment($this->versionKey()) !== false;
+        $this->cache->forever($this->versionKey(), $this->version() + 1);
+
+        return true;
     }
 
     private function remember(string $name, callable $callback): mixed
@@ -42,9 +54,14 @@ final class CachedContent implements ContentRepository
         return $this->cache->remember($this->key($name), $this->ttl, $callback);
     }
 
+    private function version(): int
+    {
+        return (int) $this->cache->get($this->versionKey(), 0);
+    }
+
     private function key(string $name): string
     {
-        return $this->prefix.'.'.$this->cache->get($this->versionKey(), 1).'.'.$name;
+        return $this->prefix.'.'.$this->version().'.'.$name;
     }
 
     private function versionKey(): string
