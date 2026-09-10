@@ -9,6 +9,8 @@ use App\Content\ContentRepository;
 use App\Enums\ContentStatus;
 use App\Models\Insight;
 use App\Models\Service;
+use App\Models\Project;
+use App\Enums\ProjectStatus;
 use Illuminate\Console\Command;
 
 /**
@@ -24,14 +26,15 @@ final class PublishDueContent extends Command
 {
     protected $signature = 'formiva:publish-due {--dry-run : List what would be published without writing}';
 
-    protected $description = 'Publish scheduled insights and services whose publish date has passed';
+    protected $description = 'Publish scheduled projects, insights and services whose publish date has passed';
 
     public function handle(): int
     {
         $insights = Insight::query()->due()->get();
         $services = Service::query()->due()->get();
+        $projects = Project::query()->due()->get();
 
-        if ($insights->isEmpty() && $services->isEmpty()) {
+        if ($insights->isEmpty() && $services->isEmpty() && $projects->isEmpty()) {
             $this->info('Nothing is due.');
 
             return self::SUCCESS;
@@ -53,7 +56,15 @@ final class PublishDueContent extends Command
             }
         }
 
-        $total = $insights->count() + $services->count();
+        foreach ($projects as $project) {
+            $this->line(sprintf('Project  %s  (%s)', $project->slug, $project->published_at->toDateTimeString()));
+
+            if (! $this->option('dry-run')) {
+                $project->forceFill(['status' => ProjectStatus::Published])->save();
+            }
+        }
+
+        $total = $insights->count() + $services->count() + $projects->count();
 
         if (! $this->option('dry-run')) {
             // Nothing in an HTTP request caused this, so nothing in the admin

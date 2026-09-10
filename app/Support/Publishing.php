@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Enums\ContentStatus;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -39,13 +40,14 @@ final class Publishing
      *
      * @return list<string>
      */
-    public static function availableFor(ContentStatus $status): array
+    public static function availableFor(BackedEnum $status): array
     {
-        return match ($status) {
-            ContentStatus::Draft => [self::PUBLISH, self::SCHEDULE, self::ARCHIVE],
-            ContentStatus::Scheduled => [self::PUBLISH, self::SCHEDULE, self::DRAFT, self::ARCHIVE],
-            ContentStatus::Published => [self::SCHEDULE, self::UNPUBLISH, self::ARCHIVE],
-            ContentStatus::Archived => [self::PUBLISH, self::DRAFT],
+        return match ($status->value) {
+            'draft' => [self::PUBLISH, self::SCHEDULE, self::ARCHIVE],
+            'scheduled' => [self::PUBLISH, self::SCHEDULE, self::DRAFT, self::ARCHIVE],
+            'published' => [self::SCHEDULE, self::UNPUBLISH, self::ARCHIVE],
+            'archived' => [self::PUBLISH, self::DRAFT],
+            default => [],
         };
     }
 
@@ -74,25 +76,32 @@ final class Publishing
      *
      * @return array{status: ContentStatus, published_at: Carbon|null}
      */
-    public static function attributes(string $action, ?Carbon $scheduledFor = null, ?Carbon $currentPublishedAt = null): array
+    public static function attributes(
+        string $action,
+        ?Carbon $scheduledFor = null,
+        ?Carbon $currentPublishedAt = null,
+        string $statusClass = ContentStatus::class,
+    ): array
     {
+        $status = static fn (string $value): BackedEnum => $statusClass::from($value);
+
         return match ($action) {
             self::PUBLISH => [
-                'status' => ContentStatus::Published,
+                'status' => $status('published'),
                 'published_at' => $currentPublishedAt !== null && $currentPublishedAt->isPast()
                     ? $currentPublishedAt
                     : Carbon::now(),
             ],
             self::SCHEDULE => [
-                'status' => ContentStatus::Scheduled,
+                'status' => $status('scheduled'),
                 'published_at' => $scheduledFor,
             ],
             self::ARCHIVE => [
-                'status' => ContentStatus::Archived,
+                'status' => $status('archived'),
                 'published_at' => $currentPublishedAt,
             ],
             default => [
-                'status' => ContentStatus::Draft,
+                'status' => $status('draft'),
                 'published_at' => null,
             ],
         };
@@ -106,10 +115,10 @@ final class Publishing
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
-    public static function reconcile(array $attributes): array
+    public static function reconcile(array $attributes, string $statusClass = ContentStatus::class): array
     {
-        $status = $attributes['status'] ?? ContentStatus::Draft;
-        $status = $status instanceof ContentStatus ? $status : ContentStatus::from((string) $status);
+        $status = $attributes['status'] ?? $statusClass::from('draft');
+        $status = $status instanceof BackedEnum ? $status : $statusClass::from((string) $status);
 
         $publishedAt = $attributes['published_at'] ?? null;
 
@@ -119,22 +128,22 @@ final class Publishing
                 : Carbon::parse((string) $publishedAt);
         }
 
-        if ($status === ContentStatus::Published && $publishedAt === null) {
+        if ($status->value === 'published' && $publishedAt === null) {
             $publishedAt = Carbon::now();
         }
 
         // A future date against a "published" status is a schedule the
         // writer described in the other order. Honour the date.
-        if ($status === ContentStatus::Published && $publishedAt->isFuture()) {
-            $status = ContentStatus::Scheduled;
+        if ($status->value === 'published' && $publishedAt?->isFuture()) {
+            $status = $statusClass::from('scheduled');
         }
 
         // A schedule with no moment is not a schedule.
-        if ($status === ContentStatus::Scheduled && $publishedAt === null) {
-            $status = ContentStatus::Draft;
+        if ($status->value === 'scheduled' && $publishedAt === null) {
+            $status = $statusClass::from('draft');
         }
 
-        if ($status === ContentStatus::Draft) {
+        if ($status->value === 'draft') {
             $publishedAt = null;
         }
 
@@ -155,11 +164,14 @@ final class Publishing
     public static function apply(Model $model, string $action, ?Carbon $scheduledFor = null): void
     {
         $current = $model->getAttribute('published_at');
+        $status = $model->getAttribute('status');
+        $statusClass = $status instanceof BackedEnum ? $status::class : ContentStatus::class;
 
         $model->forceFill(self::reconcile(self::attributes(
             $action,
             $scheduledFor,
             $current instanceof Carbon ? $current : null,
-        )))->save();
+            $statusClass,
+        ), $statusClass))->save();
     }
 }

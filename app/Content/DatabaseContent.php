@@ -93,6 +93,12 @@ final class DatabaseContent implements ContentRepository
         return $project ? $this->projectArray($project) : null;
     }
 
+    /** @return array<string, mixed> */
+    public function previewProject(Project $project): array
+    {
+        return $this->projectArray($project->load(['category', 'client', 'services', 'coverMedia', 'galleryMedia']));
+    }
+
     public function projectNeighbors(string $slug): array
     {
         $projects = $this->projects();
@@ -112,7 +118,7 @@ final class DatabaseContent implements ContentRepository
 
     public function caseStudy(): array
     {
-        $study = CaseStudy::query()->published()->with(['project.category', 'project.client', 'project.services', 'beats', 'metrics'])->first();
+        $study = CaseStudy::query()->published()->with(['project.category', 'project.client', 'project.services', 'project.coverMedia', 'project.galleryMedia', 'beats', 'metrics'])->first();
 
         if (! $study) {
             return [];
@@ -310,12 +316,17 @@ final class DatabaseContent implements ContentRepository
 
     private function projectQuery()
     {
-        return Project::query()->published()->with(['category', 'client', 'services', 'coverMedia'])->ordered();
+        return Project::query()->published()->with(['category', 'client', 'services', 'coverMedia', 'galleryMedia'])->ordered();
     }
 
     /** @return array<string, mixed> */
     private function projectArray(Project $project): array
     {
+        $gallery = $project->galleryMedia->map(static fn ($media): array => [
+            'url' => $media->url(),
+            'alt' => $media->alt,
+        ])->filter(static fn (array $image): bool => $image['url'] !== null)->values()->all();
+
         return $this->presenter->project(array_merge([
             'id' => $project->id,
             'index' => $project->index_label,
@@ -338,6 +349,7 @@ final class DatabaseContent implements ContentRepository
             'plate' => ['seed' => $project->plate_seed, 'variant' => $project->plate_variant, 'ratio' => $project->plate_ratio],
             'coverImage' => ['seed' => $project->plate_seed, 'variant' => $project->plate_variant, 'ratio' => '16/9'],
             'alt' => $project->alt,
+            'gallery' => $gallery,
         ], $this->projectMetadata()[$project->slug] ?? []));
     }
 

@@ -10,7 +10,7 @@
 
 <span class="admin-badge admin-badge--{{ $status->tone() }}" title="{{ $status->description() }}">
     {{ $status->label() }}
-    @if ($at && $status === \App\Enums\ContentStatus::Scheduled)
+    @if ($at && $status->value === 'scheduled')
         <span class="admin-sr">, </span>{{ $at->format('j M') }}
     @endif
 </span>

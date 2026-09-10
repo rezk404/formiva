@@ -97,6 +97,20 @@ class Project extends Model
         $query->orderBy('position')->orderBy('id');
     }
 
+    /** @param Builder<static> $query */
+    public function scopeDue(Builder $query): void
+    {
+        $query->where('status', ProjectStatus::Scheduled)
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+    }
+
+    public function isLive(): bool
+    {
+        return $this->status === ProjectStatus::Published
+            && ($this->published_at === null || $this->published_at->isPast());
+    }
+
     /** @return BelongsTo<Category, $this> */
     public function category(): BelongsTo
     {
