@@ -83,6 +83,40 @@ final class ProjectManagementTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_project_mutations_return_json_for_async_requests(): void
+    {
+        $project = Project::factory()->create(['is_featured' => false]);
+        $headers = ['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'];
+
+        $this->actingAs($this->editor())
+            ->withHeaders($headers)
+            ->post(route('admin.projects.featured', $project))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.featured', true);
+
+        $draft = Project::factory()->draft()->create();
+
+        $this->actingAs($this->editor())
+            ->withHeaders($headers)
+            ->post(route('admin.projects.publish', $draft), ['action' => 'publish'])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('data.status', 'published');
+    }
+
+    public function test_project_json_validation_returns_a_friendly_error_shape(): void
+    {
+        $project = Project::factory()->draft()->create();
+
+        $this->actingAs($this->editor())
+            ->withHeaders(['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->put(route('admin.projects.update', $project), ['name' => ''])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'The name field is required. (and 14 more errors)')
+            ->assertJsonStructure(['message', 'errors' => ['name']]);
+    }
+
     public function test_index_filters_projects_by_status_stage_client_and_featured(): void
     {
         $client = Client::factory()->create(['name' => 'Acme Studio']);

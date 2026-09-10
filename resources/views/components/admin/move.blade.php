@@ -9,7 +9,7 @@
     place.
 --}}
 
-<form method="POST" action="{{ $action }}" class="admin-move">
+<form method="POST" action="{{ $action }}" class="admin-move" {{ $attributes }}>
     @csrf
     <button
         type="submit"

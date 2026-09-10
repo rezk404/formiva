@@ -1,4 +1,4 @@
-@props(['record', 'action', 'transitions' => [], 'label' => 'entry'])
+@props(['record', 'action', 'transitions' => [], 'label' => 'entry', 'async' => false])
 
 @php
     // Fully qualified rather than imported: a `use` statement in a component
@@ -56,7 +56,7 @@
                     {{ $status === $scheduled ? 'Reschedule' : 'Schedule' }}
                 </button>
             @else
-                <form method="POST" action="{{ $action }}">
+                <form method="POST" action="{{ $action }}" @if ($async) data-async @endif>
                     @csrf
                     <input type="hidden" name="action" value="{{ $transition }}">
                     <button
@@ -76,7 +76,7 @@
 
 @if (in_array($schedule, $transitions, true))
     <dialog class="admin-dialog" id="{{ $dialogId }}" aria-labelledby="{{ $dialogId }}-title">
-        <form method="POST" action="{{ $action }}">
+        <form method="POST" action="{{ $action }}" @if ($async) data-async @endif>
             @csrf
             <input type="hidden" name="action" value="{{ $schedule }}">
 

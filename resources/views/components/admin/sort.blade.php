@@ -18,6 +18,7 @@
 <th scope="col" @if ($isActive) aria-sort="{{ $direction === 'asc' ? 'ascending' : 'descending' }}" @endif>
     <a
         class="{{ $isActive ? 'is-active' : '' }}"
+        data-async-nav
         href="{{ request()->fullUrlWithQuery(['sort' => $column, 'direction' => $next, 'page' => null]) }}"
     >
         {{ $slot }}

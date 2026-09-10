@@ -55,7 +55,7 @@
                 </thead>
                 <tbody>
                     @foreach ($projects as $project)
-                        <tr>
+                        <tr data-removable-row>
                             <td>
                                 <a class="admin-table__primary" href="{{ route('admin.projects.edit', $project) }}">{{ $project->name }}</a>
                                 <span class="admin-table__secondary">{{ $project->index_label }} · /{{ $project->slug }}</span>
@@ -75,14 +75,14 @@
                             <td class="admin-table__num" data-label="Updated">{{ $project->updated_at?->format('j M Y') }}</td>
                             <td data-label="">
                                 <div class="admin-table__actions">
-                                    <x-admin.move :action="route('admin.projects.move', $project)" :label="$project->name" />
+                                    <x-admin.move :action="route('admin.projects.move', $project)" :label="$project->name" data-async />
                                     <x-admin.button href="{{ route('admin.projects.preview', $project) }}" variant="ghost" size="sm" icon="eye">Preview</x-admin.button>
                                     <x-admin.button href="{{ route('admin.projects.edit', $project) }}" variant="ghost" size="sm">Edit</x-admin.button>
-                                    <form method="POST" action="{{ route('admin.projects.featured', $project) }}">
+                                    <form method="POST" action="{{ route('admin.projects.featured', $project) }}" data-async>
                                         @csrf
                                         <button type="submit" class="admin-btn admin-btn--icon" aria-label="{{ $project->is_featured ? 'Remove from homepage' : 'Feature on homepage' }}" title="{{ $project->is_featured ? 'Remove from homepage' : 'Feature on homepage' }}"><x-admin.icon name="{{ $project->is_featured ? 'eye-off' : 'eye' }}" /></button>
                                     </form>
-                                    <x-admin.delete :action="route('admin.projects.destroy', $project)" :label="'Delete '.$project->name" :confirm="'“'.$project->name.'” will be removed from Work and the public site.'" />
+                                    <x-admin.delete :action="route('admin.projects.destroy', $project)" :label="'Delete '.$project->name" :confirm="'“'.$project->name.'” will be removed from Work and the public site.'" data-async />
                                 </div>
                             </td>
                         </tr>

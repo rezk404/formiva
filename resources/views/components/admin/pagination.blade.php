@@ -11,19 +11,19 @@
                 @if ($paginator->onFirstPage())
                     <span class="is-disabled" aria-hidden="true">Prev</span>
                 @else
-                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev">Prev</a>
+                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev" data-async-nav>Prev</a>
                 @endif
 
                 @foreach ($paginator->getUrlRange(max(1, $paginator->currentPage() - 2), min($paginator->lastPage(), $paginator->currentPage() + 2)) as $page => $url)
                     @if ($page === $paginator->currentPage())
                         <span aria-current="page">{{ $page }}</span>
                     @else
-                        <a href="{{ $url }}" aria-label="Page {{ $page }}">{{ $page }}</a>
+                        <a href="{{ $url }}" aria-label="Page {{ $page }}" data-async-nav>{{ $page }}</a>
                     @endif
                 @endforeach
 
                 @if ($paginator->hasMorePages())
-                    <a href="{{ $paginator->nextPageUrl() }}" rel="next">Next</a>
+                    <a href="{{ $paginator->nextPageUrl() }}" rel="next" data-async-nav>Next</a>
                 @else
                     <span class="is-disabled" aria-hidden="true">Next</span>
                 @endif

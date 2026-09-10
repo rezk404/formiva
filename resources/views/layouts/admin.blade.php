@@ -81,7 +81,7 @@
 
     @vite(['resources/css/admin.css', 'resources/js/admin.js'])
 </head>
-<body class="admin-body">
+<body class="admin-body" data-admin-app>
     <a class="admin-skip" href="#workspace">Skip to content</a>
 
     <div class="admin-shell">
@@ -162,19 +162,22 @@
                     @endforeach
                 </nav>
 
-                <div class="admin-topbar__user">
+                <div class="admin-topbar__tools">
+                    <button type="button" class="admin-command-trigger" data-command-open aria-haspopup="dialog">
+                        <x-admin.icon name="search" />
+                        <span>Search workspace</span>
+                        <kbd>Ctrl K</kbd>
+                    </button>
+                    <div class="admin-topbar__user">
                     <span class="admin-topbar__identity">
                         <b>{{ auth()->user()->name }}</b>
                         <span>{{ auth()->user()->role->label() }}</span>
                     </span>
+                    </div>
                 </div>
             </header>
 
             <main class="admin-content" id="workspace">
-                @if (session('status'))
-                    <x-admin.alert tone="success">{{ session('status') }}</x-admin.alert>
-                @endif
-
                 @if ($errors->any())
                     <x-admin.alert tone="error" title="That could not be saved.">
                         <ul>
@@ -189,6 +192,51 @@
             </main>
         </div>
     </div>
+
+    <div class="admin-toast-stack" data-toast-stack aria-live="polite" aria-atomic="false">
+        @if (session('status'))
+            <x-admin.toast tone="success" :message="session('status')" />
+        @endif
+        @if ($errors->any())
+            <x-admin.toast tone="error" message="Please check the highlighted fields." />
+        @endif
+    </div>
+
+    <dialog class="admin-command" data-command-dialog aria-labelledby="command-title">
+        <div class="admin-command__head">
+            <label id="command-title" class="admin-sr" for="command-input">Search workspace</label>
+            <x-admin.icon name="search" />
+            <input id="command-input" type="search" placeholder="Search workspace..." autocomplete="off" data-command-input>
+            <kbd>ESC</kbd>
+        </div>
+        <div class="admin-command__results" data-command-results>
+            <p class="admin-command__label">Navigate</p>
+            @foreach ($visible as $group => $links)
+                @foreach ($links as $link)
+                    <a class="admin-command__item" href="{{ route($link['route']) }}" data-command-item data-command-search="{{ $link['label'].' '.$group }}">
+                        <x-admin.icon :name="$link['icon']" />
+                        <span>{{ $link['label'] }}</span>
+                        <small>{{ $group }}</small>
+                    </a>
+                @endforeach
+            @endforeach
+            <p class="admin-command__label">Create</p>
+            @foreach ([
+                ['route' => 'admin.projects.create', 'label' => 'New project', 'icon' => 'projects'],
+                ['route' => 'admin.services.create', 'label' => 'New service', 'icon' => 'services'],
+                ['route' => 'admin.insights.create', 'label' => 'New insight', 'icon' => 'insights'],
+            ] as $command)
+                @if (Route::has($command['route']))
+                    <a class="admin-command__item" href="{{ route($command['route']) }}" data-command-item data-command-search="{{ $command['label'] }}">
+                        <x-admin.icon :name="$command['icon']" />
+                        <span>{{ $command['label'] }}</span>
+                        <small>Create</small>
+                    </a>
+                @endif
+            @endforeach
+            <p class="admin-command__empty" data-command-empty hidden>No matching command.</p>
+        </div>
+    </dialog>
 
     {{-- One dialog for the whole workspace. Each destructive button fills it
          with its own question before it opens. --}}
