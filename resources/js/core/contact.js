@@ -6,18 +6,15 @@
  * `hidden` and focus, so back and forward never re-render content the
  * reader has already filled in.
  *
- * There is no backend yet. Submission composes a `mailto:` draft in the
- * reader's own mail client and says so plainly — nothing here should ever
- * imply a message was sent, stored, or received.
+ * Submission is progressively enhanced: the browser posts the same form to
+ * Laravel when JavaScript is available, while the server remains the source
+ * of truth for validation and persistence.
  *
  * Every dynamic piece of markup below — including the reader's own name and
  * company — is built with createElement/textContent rather than innerHTML.
  * textContent never interprets its input as HTML, so there is nothing here
  * for user-entered text to break out of.
  */
-
-/** Practical ceiling for a mailto: URL before clients start truncating. */
-const DRAFT_LIMIT = 1800;
 
 export function initContactForm() {
     const form = document.querySelector('[data-contact-form]');
@@ -252,30 +249,47 @@ export function initContactForm() {
         event.preventDefault();
         if (!valid()) return;
 
-        const data = collect();
-        let body = Object.entries(data)
-            .map(([key, value]) => `${key.replace('[]', '')}: ${value}`)
-            .join('\n');
-
-        if (body.length > DRAFT_LIMIT) {
-            body = `${body.slice(0, DRAFT_LIMIT)}\n\n[Trimmed for length — ask us for the rest.]`;
-        }
-
-        setNotice('Opening a draft in your mail client. Nothing is sent or stored by this site — review it before you send.');
+        const originalLabel = submit.textContent;
+        const csrf = form.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content || '';
         submit.disabled = true;
+        submit.textContent = 'Sending…';
+        form.setAttribute('aria-busy', 'true');
 
-        window.setTimeout(() => {
-            const recipient = form.dataset.recipient || '';
-            window.location.href =
-                `mailto:${encodeURIComponent(recipient)}` +
-                `?subject=${encodeURIComponent('FORMIVA project brief')}` +
-                `&body=${encodeURIComponent(body)}`;
-
-            // Re-enabled rather than left disabled: if no mail client is
-            // configured nothing visibly happens, and the reader needs a way
-            // to try again rather than a permanently dead button.
-            submit.disabled = false;
-        }, 350);
+        fetch(form.action, {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf },
+            body: new FormData(form),
+            credentials: 'same-origin',
+        })
+            .then(async (response) => {
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const error = new Error(payload.message || 'We could not receive the brief.');
+                    error.payload = payload;
+                    error.status = response.status;
+                    throw error;
+                }
+                return payload;
+            })
+            .then((payload) => {
+                form.querySelectorAll('[data-step]').forEach((step) => { step.hidden = true; });
+                form.querySelector('[data-intake-progress]')?.replaceChildren(document.createTextNode('✓'));
+                form.querySelector('[data-intake-total]')?.replaceChildren(document.createTextNode('received'));
+                form.querySelector('[data-intake-bar]')?.style.setProperty('width', '100%');
+                form.querySelector('.fv-intake__actions')?.setAttribute('hidden', '');
+                setNotice(`${payload.message || 'Your project brief is with us.'} Reference: ${payload.reference}`);
+            })
+            .catch((error) => {
+                if (error.status === 422 && error.payload?.errors) {
+                    const first = Object.keys(error.payload.errors)[0];
+                    const field = form.querySelector(`[name="${CSS.escape(first)}"], [name^="${CSS.escape(first)}["]`);
+                    field?.focus();
+                }
+                setNotice(error.message || 'We could not receive the brief. Please try again.');
+                submit.disabled = false;
+                submit.textContent = originalLabel;
+                form.removeAttribute('aria-busy');
+            });
     });
 
     if (progressTotal) progressTotal.textContent = `of ${String(steps.length).padStart(2, '0')}`;

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InsightController;
 use App\Http\Controllers\Admin\IntakeOptionController;
+use App\Http\Controllers\Admin\InquiryController;
 use App\Http\Controllers\Admin\ProcessStageController;
 use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Admin\SiteSettingsController;
 use App\Http\Controllers\Admin\TeamMemberController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\InquirySubmissionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +44,7 @@ Route::get('/studio', [HomeController::class, 'studio'])->name('studio');
 Route::get('/insights', [HomeController::class, 'insightsIndex'])->name('insights.index');
 Route::get('/insights/{slug}', [HomeController::class, 'insight'])->name('insights.show');
 Route::get('/start-a-project', [HomeController::class, 'contact'])->name('contact');
+Route::post('/start-a-project', InquirySubmissionController::class)->middleware('throttle:inquiries')->name('inquiries.store');
 
 /*
 |--------------------------------------------------------------------------
@@ -75,6 +78,12 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 		Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
 		// ---- Content ---------------------------------------------------
+
+		Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
+		Route::get('/inquiries/{inquiry}', [InquiryController::class, 'show'])->name('inquiries.show');
+		Route::put('/inquiries/{inquiry}', [InquiryController::class, 'update'])->name('inquiries.update');
+		Route::post('/inquiries/{inquiry}/notes', [InquiryController::class, 'note'])->name('inquiries.notes.store');
+		Route::post('/inquiries/{inquiry}/convert', [InquiryController::class, 'convert'])->name('inquiries.convert');
 
 		Route::post('/projects/{project}/move', [ProjectController::class, 'move'])->name('projects.move');
 		Route::post('/projects/{project}/featured', [ProjectController::class, 'toggleFeatured'])->name('projects.featured');

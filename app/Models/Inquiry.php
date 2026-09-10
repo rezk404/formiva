@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Inquiry extends Model
@@ -92,5 +93,11 @@ class Inquiry extends Model
     public function inquiryNotes(): HasMany
     {
         return $this->hasMany(InquiryNote::class)->orderBy('created_at');
+    }
+
+    /** @return MorphMany<ActivityLog, $this> */
+    public function activityLogs(): MorphMany
+    {
+        return $this->morphMany(ActivityLog::class, 'subject')->latest('created_at');
     }
 }

@@ -13,6 +13,11 @@ enum ActivityEvent: string
     case Published = 'published';
     case Unpublished = 'unpublished';
     case StatusChanged = 'status_changed';
+    case Assigned = 'assigned';
+    case NoteAdded = 'note_added';
+    case Converted = 'converted';
+    case Declined = 'declined';
+    case MarkedSpam = 'marked_spam';
     case Login = 'login';
     case LoginFailed = 'login_failed';
 }
