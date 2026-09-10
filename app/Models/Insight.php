@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\ContentStatus;
 use App\Models\Concerns\HasMediaAttachments;
+use App\Models\Concerns\Publishable;
 use Database\Factories\InsightFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Insight extends Model
 {
     /** @use HasFactory<InsightFactory> */
-    use HasFactory, HasMediaAttachments, SoftDeletes;
+    use HasFactory, HasMediaAttachments, Publishable, SoftDeletes;
 
     /** @var list<string> */
     protected $fillable = [
@@ -50,27 +51,42 @@ class Insight extends Model
         ];
     }
 
-    /** @param Builder<static> $query */
-    public function scopePublished(Builder $query): void
-    {
-        $query->where('status', ContentStatus::Published)
-            ->where(function (Builder $query): void {
-                $query->whereNull('published_at')
-                    ->orWhere('published_at', '<=', now());
-            });
-    }
-
-    /** @param Builder<static> $query */
-    public function scopeScheduled(Builder $query): void
-    {
-        $query->where('status', ContentStatus::Scheduled)
-            ->where('published_at', '>', now());
-    }
-
-    /** @param Builder<static> $query */
+    /**
+     * Newest first — the journal reads in reverse chronology, and an entry
+     * with no date yet sorts to the bottom rather than jumping the queue.
+     *
+     * @param  Builder<static>  $query
+     */
     public function scopeOrdered(Builder $query): void
     {
         $query->orderByDesc('published_at')->orderBy('id');
+    }
+
+    /** @param  Builder<static>  $query */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('title', 'like', "%{$term}%")
+                ->orWhere('slug', 'like', "%{$term}%")
+                ->orWhere('dek', 'like', "%{$term}%");
+        });
+    }
+
+    /**
+     * Roughly how long the body takes to read, at 200 words a minute. Used
+     * as the default when a writer leaves the field alone.
+     */
+    public static function estimateReadingMinutes(?string $body): int
+    {
+        $words = str_word_count(strip_tags((string) $body));
+
+        return max(1, min(255, (int) ceil($words / 200)));
     }
 
     /** @return BelongsTo<Category, $this> */

@@ -81,7 +81,15 @@ final class ApplicationSchemaTest extends TestCase
         }
     }
 
-    public function test_content_source_remains_static(): void
+    /**
+     * The suite runs against the files. The application default is now
+     * "database" — the CMS drives the site — but the public smoke tests here
+     * deliberately render with an empty database, so phpunit.xml pins the
+     * source back to static. This asserts that pin is in place; if it ever
+     * slips, those tests would start failing for a reason that has nothing
+     * to do with what they are testing.
+     */
+    public function test_the_suite_pins_the_static_content_source(): void
     {
         $this->assertSame('static', config('formiva.content_source'));
     }

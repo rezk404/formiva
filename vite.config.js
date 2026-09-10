@@ -5,7 +5,15 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/css/admin.css', 'resources/js/app.js'],
+            input: [
+                'resources/css/app.css',
+                'resources/css/admin.css',
+                'resources/js/app.js',
+                // The workspace ships its own small behaviour file. It has no
+                // dependencies and never loads on the public site, so it stays
+                // out of the three.js/gsap chunking below.
+                'resources/js/admin.js',
+            ],
             refresh: ['resources/views/**', 'resources/content/**'],
         }),
         tailwindcss(),

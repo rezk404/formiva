@@ -31,6 +31,19 @@ use App\Models\Testimonial;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * Lifts resources/content into the database.
+ *
+ * Idempotent by design — every write is an updateOrCreate keyed on the
+ * record's natural identity, so running it twice is the same as running it
+ * once, and running it over a live database refreshes the imported rows
+ * without touching anything the CMS has since added.
+ *
+ * Settings hold only what has no table: the studio and process framing
+ * prose, the intake qualification rules, client wordmarks and the
+ * per-project gallery metadata. Anything with a table is imported into it,
+ * because the table is what the CMS edits and DatabaseContent reads.
+ */
 final class ContentImporter
 {
     public function __construct(private readonly string $path)
@@ -54,10 +67,26 @@ final class ContentImporter
 
             Setting::put('content', 'site', $site, SettingType::Json);
             Setting::put('content', 'clients', $clients, SettingType::Json);
-            Setting::put('content', 'intake', $intake, SettingType::Json);
-            Setting::put('content', 'studio', $studio, SettingType::Json);
-            Setting::put('content', 'process', $process, SettingType::Json);
-            Setting::put('content', 'team', $team, SettingType::Json);
+
+            // Framing only. Positions, stats, stages and options each have a
+            // table, and duplicating them here would give the CMS two places
+            // to disagree with itself.
+            Setting::put('content', 'studio', [
+                'eyebrow' => $studio['eyebrow'] ?? 'The studio',
+                'headline' => array_values((array) ($studio['headline'] ?? [])),
+                'story' => array_values((array) ($studio['story'] ?? [])),
+            ], SettingType::Json);
+
+            Setting::put('content', 'process', [
+                'eyebrow' => $process['eyebrow'] ?? 'The system',
+                'headline' => array_values((array) ($process['headline'] ?? [])),
+                'lede' => $process['lede'] ?? '',
+            ], SettingType::Json);
+
+            Setting::put('content', 'intake', [
+                'rules' => (array) ($intake['rules'] ?? []),
+            ], SettingType::Json);
+
             Setting::put('content', 'project-meta', collect($projects)->mapWithKeys(static fn (array $project): array => [
                 $project['slug'] => [
                     'clientLogo' => $project['clientLogo'] ?? null,
@@ -216,6 +245,10 @@ final class ContentImporter
                 [
                     'name' => $record['name'], 'role' => $record['role'], 'bio' => $record['bio'],
                     'since_year' => (int) $record['since'], 'position' => $position, 'is_published' => true,
+                    'plate_seed' => $record['plate']['seed'] ?? null,
+                    'plate_variant' => $record['plate']['variant'] ?? null,
+                    'plate_ratio' => $record['plate']['ratio'] ?? null,
+                    'alt' => $record['alt'] ?? null,
                 ],
             );
         }
@@ -240,25 +273,61 @@ final class ContentImporter
                 'index_label' => $record['index'], 'title' => $record['title'], 'window' => $record['window'],
                 'body' => $record['body'], 'output' => $record['output'], 'span_start' => $record['span'][0],
                 'span_end' => $record['span'][1], 'weight' => $record['weight'],
+                'overlap' => (bool) ($record['overlap'] ?? false),
             ]);
         }
     }
 
+    /**
+     * Intake options, flattened into rows the CMS can reorder.
+     *
+     * Budgets keep their project-type group — that mapping is the whole
+     * point of the step — and namespace their stored value by it, because
+     * the same range is offered under several groups while (kind, value)
+     * stays unique. Positions run as one sequence per kind so display order
+     * survives the round trip exactly.
+     */
     private function importIntake(array $content): void
     {
+        $budgets = [];
+
+        foreach ((array) ($content['budgets'] ?? []) as $group => $ranges) {
+            foreach ((array) $ranges as $range) {
+                $budgets[] = ['value' => $range, 'label' => $range, 'group' => (string) $group];
+            }
+        }
+
+        $flat = static fn (array $values): array => array_map(
+            static fn (string $value): array => ['value' => $value, 'label' => $value, 'group' => IntakeOption::SHARED_GROUP],
+            array_values($values),
+        );
+
         $groups = [
-            IntakeOptionKind::ProjectType->value => $content['projectTypes'],
-            IntakeOptionKind::Budget->value => collect($content['budgets'])->flatten()->map(fn ($value): array => ['value' => $value, 'label' => $value, 'group' => 'all'])->all(),
-            IntakeOptionKind::Timeline->value => array_map(fn ($value): array => ['value' => $value, 'label' => $value, 'group' => 'all'], $content['timelines']),
-            IntakeOptionKind::CompanySize->value => array_map(fn ($value): array => ['value' => $value, 'label' => $value, 'group' => 'all'], $content['companySizes']),
-            IntakeOptionKind::Service->value => array_map(fn ($value): array => ['value' => Str::slug($value), 'label' => $value, 'group' => 'all'], $content['services']),
+            IntakeOptionKind::ProjectType->value => array_values((array) ($content['projectTypes'] ?? [])),
+            IntakeOptionKind::Budget->value => $budgets,
+            IntakeOptionKind::Timeline->value => $flat((array) ($content['timelines'] ?? [])),
+            IntakeOptionKind::CompanySize->value => $flat((array) ($content['companySizes'] ?? [])),
+            IntakeOptionKind::Service->value => array_map(
+                static fn (string $value): array => ['value' => Str::slug($value), 'label' => $value, 'group' => IntakeOption::SHARED_GROUP],
+                array_values((array) ($content['services'] ?? [])),
+            ),
         ];
 
         foreach ($groups as $kind => $options) {
+            $enum = IntakeOptionKind::from($kind);
+
             foreach ($options as $position => $option) {
                 IntakeOption::query()->updateOrCreate(
-                    ['kind' => $kind, 'value' => $option['value'], 'group' => $option['group']],
-                    ['label' => $option['label'], 'position' => $position, 'is_active' => true],
+                    [
+                        'kind' => $enum,
+                        'value' => IntakeOption::qualifiedValue($enum, (string) $option['group'], (string) $option['value']),
+                    ],
+                    [
+                        'label' => $option['label'],
+                        'group' => $option['group'],
+                        'position' => $position,
+                        'is_active' => true,
+                    ],
                 );
             }
         }

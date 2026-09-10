@@ -7,15 +7,24 @@ return [
     | Content Source
     |--------------------------------------------------------------------------
     |
-    | Determines where public content is loaded from. The current frontend
-    | reads from StaticContent via ContentRepository. A future phase will
-    | introduce DatabaseContent and switch this value to "database".
+    | Where the public site reads its content from.
     |
-    | Supported: static, database
+    |   static   — resources/content/*.php, the files in the repository
+    |   database — the CMS tables, edited from /admin
+    |
+    | The default is "database": the CMS exists, and a workspace whose edits
+    | the site ignores is worse than no workspace at all. The files remain the
+    | seed and the fallback — DatabaseContent reads them for the handful of
+    | singleton values that have no row yet, so an unseeded database renders
+    | rather than fatals.
+    |
+    | The test suite pins this back to "static" in phpunit.xml. Its public
+    | smoke tests run against an empty database on purpose, and the database
+    | path has its own coverage in DatabaseContentIntegrationTest.
     |
     */
 
-    'content_source' => env('FORMIVA_CONTENT', 'static'),
+    'content_source' => env('FORMIVA_CONTENT', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -28,7 +37,7 @@ return [
     */
 
     'content_cache' => [
-        'enabled' => env('FORMIVA_CONTENT_CACHE', false),
+        'enabled' => filter_var(env('FORMIVA_CONTENT_CACHE', false), FILTER_VALIDATE_BOOLEAN),
         'ttl' => env('FORMIVA_CONTENT_CACHE_TTL', 3600),
     ],
 

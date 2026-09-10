@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class Media extends Model
 {
@@ -49,6 +51,27 @@ class Media extends Model
     public function isGeneratedPlate(): bool
     {
         return $this->disk === 'generated';
+    }
+
+    /**
+     * A browsable URL, or null when there is not one.
+     *
+     * Generated plates are drawn rather than stored, and a record can name a
+     * disk this installation does not configure. Both cases return null so a
+     * template can fall back to a placeholder instead of rendering a broken
+     * image — which is the whole reason this is not just a path accessor.
+     */
+    public function url(): ?string
+    {
+        if ($this->isGeneratedPlate() || $this->path === null || $this->path === '') {
+            return null;
+        }
+
+        try {
+            return Storage::disk($this->disk)->url($this->path);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /** @return BelongsTo<MediaFolder, $this> */

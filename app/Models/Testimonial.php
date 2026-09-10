@@ -37,16 +37,32 @@ class Testimonial extends Model
         ];
     }
 
-    /** @param Builder<static> $query */
+    /** @param  Builder<static>  $query */
     public function scopePublished(Builder $query): void
     {
         $query->where('is_published', true);
     }
 
-    /** @param Builder<static> $query */
+    /** @param  Builder<static>  $query */
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('position')->orderBy('id');
+    }
+
+    /** @param  Builder<static>  $query */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('quote', 'like', "%{$term}%")
+                ->orWhere('author_name', 'like', "%{$term}%")
+                ->orWhere('company', 'like', "%{$term}%");
+        });
     }
 
     /** @return BelongsTo<Client, $this> */

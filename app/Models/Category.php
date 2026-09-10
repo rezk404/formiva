@@ -39,6 +39,38 @@ class Category extends Model
         $query->orderBy('position')->orderBy('id');
     }
 
+    /** @param Builder<static> $query */
+    public function scopeOfType(Builder $query, CategoryType|string|null $type): void
+    {
+        if ($type === null || $type === '') {
+            return;
+        }
+
+        $query->where('type', $type instanceof CategoryType ? $type : CategoryType::from($type));
+    }
+
+    /** @param Builder<static> $query */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('name', 'like', "%{$term}%")
+                ->orWhere('slug', 'like', "%{$term}%");
+        });
+    }
+
+    /** Whether anything still points at this category. */
+    public function isInUse(): bool
+    {
+        return ($this->projects_count ?? $this->projects()->count()) > 0
+            || ($this->insights_count ?? $this->insights()->count()) > 0;
+    }
+
     /** @return HasMany<Project, $this> */
     public function projects(): HasMany
     {
