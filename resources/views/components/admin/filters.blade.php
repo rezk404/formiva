@@ -9,7 +9,11 @@
     button, so it survives a back-button too.
 --}}
 
-<form method="GET" action="{{ $action ?? request()->url() }}" class="admin-filters" role="search">
+<form method="GET" action="{{ $action ?? request()->url() }}" class="admin-filters" role="search" data-async-filter>
+    <button type="button" class="admin-filter-toggle" data-filter-toggle aria-expanded="false">
+        <span>Filters</span>
+        @if (count($active) > 0)<b>{{ count($active) }}</b>@endif
+    </button>
     {{-- Filters chosen elsewhere on the screen — the state tabs above — ride
          along so searching does not silently discard them. --}}
     @foreach ($keep as $name => $value)

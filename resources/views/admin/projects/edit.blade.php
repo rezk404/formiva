@@ -11,6 +11,6 @@
     </x-slot:actions>
 </x-admin.page-header>
 
-<x-admin.publish-bar :record="$project" :action="route('admin.projects.publish', $project)" :transitions="$transitions" label="project" />
+<x-admin.publish-bar :record="$project" :action="route('admin.projects.publish', $project)" :transitions="$transitions" label="project" async />
 @include('admin.projects.form', ['action' => route('admin.projects.update', $project), 'method' => 'PUT', 'submit' => 'Save project'])
 @endsection

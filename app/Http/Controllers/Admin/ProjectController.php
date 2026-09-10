@@ -18,6 +18,7 @@ use App\Models\Service;
 use App\Support\Ordering;
 use App\Support\Publishing;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -87,7 +88,7 @@ final class ProjectController extends AdminController
         ])));
     }
 
-    public function store(ProjectRequest $request): RedirectResponse
+    public function store(ProjectRequest $request): RedirectResponse|JsonResponse
     {
         $project = DB::transaction(function () use ($request): Project {
             $project = Project::query()->create([
@@ -102,7 +103,11 @@ final class ProjectController extends AdminController
             return $project;
         });
 
-        return $this->saved('admin.projects.edit', $project->isLive() ? "“{$project->name}” created and published." : "“{$project->name}” created as a draft.", [$project]);
+        $message = $project->isLive() ? "“{$project->name}” created and published." : "“{$project->name}” created as a draft.";
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'redirect' => route('admin.projects.edit', $project)])
+            : $this->saved('admin.projects.edit', $message, [$project]);
     }
 
     public function edit(Project $project): View
@@ -114,7 +119,7 @@ final class ProjectController extends AdminController
         ]);
     }
 
-    public function update(ProjectRequest $request, Project $project): RedirectResponse
+    public function update(ProjectRequest $request, Project $project): RedirectResponse|JsonResponse
     {
         DB::transaction(function () use ($request, $project): void {
             $project->update($request->content());
@@ -122,43 +127,63 @@ final class ProjectController extends AdminController
             $project->services()->sync($request->services());
         });
 
-        return $this->saved('admin.projects.edit', "“{$project->name}” saved.", [$project]);
+        $message = "“{$project->name}” saved.";
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'data' => ['id' => $project->id]])
+            : $this->saved('admin.projects.edit', $message, [$project]);
     }
 
-    public function destroy(Project $project): RedirectResponse
+    public function destroy(Request $request, Project $project): RedirectResponse|JsonResponse
     {
         $this->authorize('delete', $project);
         $name = $project->name;
         $project->delete();
         Ordering::resequence(Project::query());
 
-        return $this->saved('admin.projects.index', "“{$name}” deleted.");
+        $message = "“{$name}” deleted.";
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'data' => ['id' => $project->id]])
+            : $this->saved('admin.projects.index', $message);
     }
 
-    public function move(Request $request, Project $project): RedirectResponse
+    public function move(Request $request, Project $project): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $project);
         $direction = $request->string('direction')->toString();
         abort_unless(in_array($direction, Ordering::directions(), true), 422);
 
-        return $this->savedBack(Ordering::move($project, $direction, Project::query()) ? 'Order updated.' : 'Already at that end of the list.');
+        $message = Ordering::move($project, $direction, Project::query()) ? 'Order updated.' : 'Already at that end of the list.';
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message])
+            : $this->savedBack($message);
     }
 
-    public function toggleFeatured(Project $project): RedirectResponse
+    public function toggleFeatured(Request $request, Project $project): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $project);
         $project->update(['is_featured' => ! $project->is_featured]);
 
-        return $this->savedBack($project->is_featured ? "“{$project->name}” is featured on the homepage." : "“{$project->name}” was removed from featured work.");
+        $message = $project->is_featured ? "“{$project->name}” is featured on the homepage." : "“{$project->name}” was removed from featured work.";
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'data' => ['featured' => $project->is_featured]])
+            : $this->savedBack($message);
     }
 
-    public function publish(PublishRequest $request, Project $project): RedirectResponse
+    public function publish(PublishRequest $request, Project $project): RedirectResponse|JsonResponse
     {
         $action = $request->action();
         abort_unless(in_array($action, Publishing::availableFor($project->status), true), 422);
         Publishing::apply($project, $action, $request->scheduledFor());
 
-        return $this->savedBack(sprintf('“%s” is now %s.', $project->name, $project->status->value));
+        $message = sprintf('“%s” is now %s.', $project->name, $project->status->value);
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'data' => ['status' => $project->status->value, 'published_at' => $project->published_at?->toIso8601String()]])
+            : $this->savedBack($message);
     }
 
     public function preview(Project $project): View

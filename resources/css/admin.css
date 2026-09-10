@@ -1193,6 +1193,15 @@ svg {
     background: var(--panel-sunk);
 }
 
+.admin-save-state {
+    margin-right: auto;
+    color: var(--muted);
+    font-size: var(--t-sm);
+}
+
+.admin-discard[hidden] { display: none; }
+.admin-filter-toggle { display: none; }
+
 .admin-form-actions__spacer {
     margin-left: auto;
 }
@@ -2847,4 +2856,264 @@ a.admin-metric:hover {
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
     }
+}
+
+/* ==========================================================================
+   MODERN WORKSPACE LAYER
+   Shared application furniture: clearer type, quieter surfaces, and feedback
+   that does not make a user lose the context of the work they are doing.
+   ========================================================================== */
+
+:root {
+    --t-base: 0.9375rem;
+    --t-md: 1rem;
+    --t-lg: 1.25rem;
+    --t-xl: 1.625rem;
+    --t-2xl: 2.125rem;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --shadow-float: 0 18px 50px rgba(11, 11, 12, 0.14);
+}
+
+.admin-content {
+    max-width: 1600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: clamp(28px, 4vw, 56px) clamp(20px, 4vw, 64px) 80px;
+}
+
+.admin-topbar {
+    min-height: 72px;
+    padding: 0 clamp(20px, 4vw, 64px);
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    border-bottom: 1px solid var(--line-soft);
+    backdrop-filter: blur(14px);
+}
+
+.admin-topbar__tools {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    margin-left: auto;
+}
+
+.admin-command-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-width: 210px;
+    padding: 9px 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    background: color-mix(in srgb, var(--panel) 72%, transparent);
+    font: inherit;
+    cursor: pointer;
+    transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.admin-command-trigger:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+    background: var(--panel);
+}
+
+.admin-command-trigger svg {
+    width: 16px;
+    height: 16px;
+}
+
+.admin-command-trigger kbd,
+.admin-command__head kbd {
+    margin-left: auto;
+    padding: 2px 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--faint);
+    font: 0.6875rem var(--font-mono);
+}
+
+.admin-btn {
+    min-height: 40px;
+    padding: 9px 15px;
+    border-radius: var(--radius-sm);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) ease, border-color var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+
+.admin-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.admin-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.admin-btn.is-loading,
+.admin-btn:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.admin-panel {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) inset;
+}
+
+.admin-panel__head {
+    padding: 22px 24px;
+}
+
+.admin-panel__head h2 {
+    font-size: var(--t-lg);
+    letter-spacing: -0.015em;
+}
+
+.admin-field__label,
+.admin-filters__field label {
+    font-size: var(--t-sm);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.admin-field__hint,
+.admin-panel__head p,
+.admin-empty__description {
+    font-size: var(--t-base);
+    line-height: 1.55;
+}
+
+.admin-input,
+.admin-textarea,
+.admin-select {
+    min-height: 44px;
+    border-radius: var(--radius-sm);
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--panel) 78%, var(--paper));
+    font-size: var(--t-base);
+    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.admin-input:focus,
+.admin-textarea:focus,
+.admin-select:focus {
+    border-color: var(--signal);
+    box-shadow: 0 0 0 3px var(--signal-wash);
+    background: var(--panel);
+    outline: 0;
+}
+
+.admin-toast-stack {
+    position: fixed;
+    z-index: 80;
+    right: 24px;
+    bottom: 24px;
+    display: grid;
+    gap: 10px;
+    width: min(380px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.admin-toast {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 28px;
+    align-items: start;
+    gap: 10px;
+    padding: 14px 12px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--signal);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+    box-shadow: var(--shadow-float);
+    pointer-events: auto;
+    animation: admin-toast-in 220ms var(--ease-out) both;
+}
+
+.admin-toast--success { border-left-color: var(--positive); }
+.admin-toast--error { border-left-color: var(--signal); }
+.admin-toast--warning { border-left-color: var(--warning); }
+.admin-toast__close {
+    border: 0;
+    color: var(--muted);
+    background: transparent;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+@keyframes admin-toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.admin-command {
+    width: min(620px, calc(100vw - 32px));
+    max-height: min(620px, calc(100vh - 80px));
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+    color: var(--text);
+    box-shadow: var(--shadow-float);
+}
+
+.admin-command::backdrop { background: rgba(11, 11, 12, 0.42); backdrop-filter: blur(4px); }
+.admin-command__head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+.admin-command__head svg { width: 18px; color: var(--muted); }
+.admin-command__head input { width: 100%; border: 0; outline: 0; background: transparent; color: inherit; font: 1rem var(--font-display); }
+.admin-command__results { padding: 10px; overflow: auto; }
+.admin-command__label { padding: 10px 10px 6px; color: var(--muted); font: 0.6875rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+.admin-command__item { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 10px; border-radius: var(--radius-sm); }
+.admin-command__item:hover, .admin-command__item.is-active { background: var(--signal-wash); color: var(--signal); }
+.admin-command__item svg { width: 16px; }
+.admin-command__item small { color: var(--muted); font-size: var(--t-xs); }
+.admin-command__empty { padding: 24px 10px; color: var(--muted); text-align: center; }
+
+.admin-form-actions {
+    position: sticky;
+    z-index: 10;
+    bottom: 16px;
+    margin-top: 24px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    box-shadow: var(--shadow-float);
+    backdrop-filter: blur(14px);
+}
+
+@media (max-width: 620px) {
+    .admin-content { padding-inline: 16px; }
+    .admin-topbar { padding-inline: 16px; }
+    .admin-command-trigger { min-width: 0; padding: 9px; }
+    .admin-command-trigger span, .admin-command-trigger kbd { display: none; }
+    .admin-toast-stack { right: 16px; bottom: 16px; }
+    .admin-filter-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 9px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--panel);
+        color: var(--text);
+        font: 600 var(--t-sm) var(--font-display);
+    }
+    .admin-filter-toggle b {
+        display: grid;
+        min-width: 22px;
+        min-height: 22px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--signal-wash);
+        color: var(--signal);
+        font-size: var(--t-xs);
+    }
+    .admin-filters:not(.is-open) .admin-filters__field:not(.admin-filters__field--grow),
+    .admin-filters:not(.is-open) .admin-filters__actions { display: none; }
 }

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\ContentStatus;
 use App\Enums\InquiryStatus;
+use App\Enums\ProjectStatus;
 use App\Models\Client;
 use App\Models\Insight;
 use App\Models\Inquiry;
@@ -42,17 +43,19 @@ final class DashboardController extends AdminController
 
         $insights = $this->statusCounts(Insight::query());
         $services = $this->statusCounts(Service::query());
+        $projects = $this->projectCounts();
         $flags = $this->flags();
 
         return view('admin.dashboard', [
             'user' => $user,
-            'metrics' => $this->metrics($insights, $services),
+            'metrics' => $this->metrics($insights, $services, $projects),
             'health' => [
+                'Projects' => ['route' => 'admin.projects.index', 'counts' => $projects],
                 'Insights' => ['route' => 'admin.insights.index', 'counts' => $insights],
                 'Services' => ['route' => 'admin.services.index', 'counts' => $services],
             ],
             'recent' => $this->recent(),
-            'attention' => $this->attention($insights, $services, $flags),
+            'attention' => $this->attention($insights, $services, $projects, $flags),
             'actions' => $this->quickActions($user),
         ]);
     }
@@ -83,6 +86,24 @@ final class DashboardController extends AdminController
         return $shape;
     }
 
+    /** @return array<string, int> */
+    private function projectCounts(): array
+    {
+        $counts = Project::query()->toBase()
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->all();
+
+        $shape = [];
+        foreach (ProjectStatus::cases() as $status) {
+            $shape[$status->value] = (int) ($counts[$status->value] ?? 0);
+        }
+        $shape['total'] = array_sum($shape);
+
+        return $shape;
+    }
+
     /**
      * The handful of yes/no facts the attention panel asks about, gathered in
      * one query each rather than one per sentence.
@@ -94,7 +115,7 @@ final class DashboardController extends AdminController
         $now = now();
 
         return [
-            'due' => Insight::query()->due()->count() + Service::query()->due()->count(),
+            'due' => Insight::query()->due()->count() + Service::query()->due()->count() + Project::query()->due()->count(),
             'soon' => Insight::query()
                 ->scheduled()
                 ->where('published_at', '<=', $now->copy()->addDays(3))
@@ -117,9 +138,9 @@ final class DashboardController extends AdminController
      * @param  array<string, int>  $services
      * @return array<int, array<string, mixed>>
      */
-    private function metrics(array $insights, array $services): array
+    private function metrics(array $insights, array $services, array $projects): array
     {
-        $projects = Project::query()->toBase()
+        $projectTotals = Project::query()->toBase()
             ->selectRaw('count(*) as total')
             ->selectRaw('sum(case when status = ? and (published_at is null or published_at <= ?) then 1 else 0 end) as live', [
                 ContentStatus::Published->value,
@@ -135,9 +156,9 @@ final class DashboardController extends AdminController
         return [
             [
                 'label' => 'Projects',
-                'value' => (int) ($projects->total ?? 0),
-                'detail' => (int) ($projects->live ?? 0).' published',
-                'href' => null,
+                'value' => (int) ($projectTotals->total ?? 0),
+                'detail' => $projects[ProjectStatus::Published->value].' live · '.$projects[ProjectStatus::Draft->value].' draft',
+                'href' => route('admin.projects.index'),
             ],
             [
                 'label' => 'Inquiries',
@@ -181,6 +202,23 @@ final class DashboardController extends AdminController
      */
     private function recent()
     {
+        $projects = Project::query()
+            ->select(['id', 'name', 'slug', 'status', 'published_at', 'updated_at', 'client_id'])
+            ->with('client:id,name')
+            ->orderByDesc('updated_at')
+            ->limit(4)
+            ->get()
+            ->map(fn (Project $project): array => [
+                'kind' => 'Project',
+                'title' => $project->name,
+                'meta' => $project->client?->name ?? 'Unassigned',
+                'by' => null,
+                'status' => $project->status,
+                'at' => $project->published_at,
+                'updated' => $project->updated_at,
+                'href' => route('admin.projects.edit', $project),
+            ]);
+
         $insights = Insight::query()
             ->select(['id', 'title', 'slug', 'status', 'published_at', 'updated_at', 'category_id', 'author_id'])
             ->with(['category:id,name', 'author:id,name'])
@@ -215,7 +253,7 @@ final class DashboardController extends AdminController
                 'href' => route('admin.services.edit', $service),
             ]);
 
-        return $insights->concat($services)
+        return $projects->concat($insights)->concat($services)
             ->sortByDesc('updated')
             ->take(6)
             ->values();
@@ -230,7 +268,7 @@ final class DashboardController extends AdminController
      * @param  array<string, int>  $flags
      * @return array<int, array<string, mixed>>
      */
-    private function attention(array $insights, array $services, array $flags): array
+    private function attention(array $insights, array $services, array $projects, array $flags): array
     {
         $signals = [];
 
@@ -244,14 +282,14 @@ final class DashboardController extends AdminController
             ];
         }
 
-        $drafts = $insights[ContentStatus::Draft->value] + $services[ContentStatus::Draft->value];
+        $drafts = $insights[ContentStatus::Draft->value] + $services[ContentStatus::Draft->value] + $projects[ProjectStatus::Draft->value];
 
         if ($drafts > 0) {
             $signals[] = [
                 'tone' => 'neutral',
                 'title' => $drafts.' '.str('draft')->plural($drafts).' waiting',
                 'body' => 'Written but not published. Nothing here is visible to a visitor yet.',
-                'href' => route('admin.insights.index', ['status' => ContentStatus::Draft->value]),
+                'href' => route('admin.projects.index', ['status' => ProjectStatus::Draft->value]),
                 'action' => 'Review drafts',
             ];
         }
@@ -338,6 +376,7 @@ final class DashboardController extends AdminController
     private function quickActions(User $user): array
     {
         $candidates = [
+            ['ability' => 'create', 'subject' => Project::class, 'label' => 'New project', 'meta' => 'Work · body of work', 'icon' => 'projects', 'href' => route('admin.projects.create')],
             ['ability' => 'create', 'subject' => Insight::class, 'label' => 'Write an insight', 'meta' => 'Journal', 'icon' => 'insights', 'href' => route('admin.insights.create')],
             ['ability' => 'create', 'subject' => Service::class, 'label' => 'Add a service', 'meta' => 'Capability index', 'icon' => 'services', 'href' => route('admin.services.create')],
             ['ability' => 'create', 'subject' => Testimonial::class, 'label' => 'Add a testimonial', 'meta' => 'About · proof', 'icon' => 'testimonials', 'href' => route('admin.testimonials.create')],

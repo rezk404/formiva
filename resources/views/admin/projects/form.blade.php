@@ -5,7 +5,7 @@
     $selectedGallery = old('gallery_media', $gallery->pluck('id')->all());
 @endphp
 
-<form method="POST" action="{{ $action }}">
+<form method="POST" action="{{ $action }}" data-async data-dirty-form data-editor>
     @csrf
     @if ($method !== 'POST') @method($method) @endif
 
@@ -100,6 +100,8 @@
     </div>
 
     <div class="admin-form-actions">
+        <span class="admin-save-state" data-save-state>No changes</span>
+        <button type="button" class="admin-btn admin-btn--quiet admin-discard" data-discard hidden>Discard changes</button>
         @if ($project->exists)
             <x-admin.button>{{ $submit }}</x-admin.button>
         @else
